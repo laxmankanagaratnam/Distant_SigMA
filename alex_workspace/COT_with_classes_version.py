@@ -297,10 +297,22 @@ class Custom_tree_node:
         self.name = name
         self.uuid = uuid.uuid4()
         self.children = []
+        self.parent = None
 
     def add_child(self, child):
+        child.parent = self
         self.children.append(child)
         return child 
+
+    def get_all_parts(self):
+        parts = []
+        # split name by '+' and add each part to the list
+        for part in self.name.split("+"):
+            parts.append(part)
+        return parts
+    
+    
+    
 
 
 
