@@ -487,7 +487,7 @@ class Custom_Tree:
     
 
 
-    def find_complete_subgraphs_in_connected_graph(self, G, current_graph, last_node=None,problem_solver = problem_handler_kill_tree_if_no_complete_subtree_all):
+    def find_complete_subgraphs_in_connected_graph(self, G, current_graph, last_node=None, problem_solver = problem_handler_create_multiple_trees_on_conflict):
         graph = G
         if NxGraphAssistant.is_complete_graph(G.subgraph(current_graph)):
             name = ""
@@ -510,6 +510,8 @@ class Custom_Tree:
                     last_node = self.add_node(0,"root")
                 print("case more than one most connected node")
                 print("most connected nodes", most_connected_nodes)
+                # print type of problem solver
+                print("problem solver", type(problem_solver))
                 problem_solver(self,G = G, current_graph = current_graph,most_connected_nodes = most_connected_nodes, last_node = last_node)
             else:
                 print("case one most connected node")
@@ -537,7 +539,8 @@ class ClusteringHandler():
         for g in nx.connected_components(G):
             tree = Custom_Tree()
             graph = G.subgraph(g)
-            tree.find_complete_subgraphs_in_connected_graph(graph, graph, None,problem_solver=solver)
+            last_node = None
+            tree.find_complete_subgraphs_in_connected_graph(graph,graph,last_node,solver)
             trees.append(tree)
 
         # Print all trees
@@ -551,7 +554,7 @@ class ClusteringHandler():
 #%%
 clusterMaster = ClusteringHandler()
 #graph = GraphCreator.create_random_graph_with_weights(num_nodes=40, edge_probability=0.3)
-graph = GraphCreator().create_advanced_graph()
+graph = GraphCreator.create_random_graph_with_weights(10,0.3)
 #graph = GraphCreator().create_random_graph_with_weights(50, 0.5)
 #graph = NxGraphAssistant.analyze_cliques(graph,0.2)
 #NxGraphAssistant.plot_networkX_graph(graph)
