@@ -381,7 +381,7 @@ class Custom_Tree:
                     print("-current subgraph", current_subgraph)
                     self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node)
                     
-    def problem_handler_kill_tree_if_no_complete_subtree(self, G, current_graph, most_connected_nodes, last_node=None, depth=5):
+    def problem_handler_kill_tree_if_no_complete_subtree(self, G, current_graph, most_connected_nodes, last_node=None, depth=1):
         for node in most_connected_nodes:
             print("iteration - kill")
             most_connected_node = node
@@ -469,12 +469,12 @@ class Custom_Tree:
 class ClusteringHandler():
     def __init__(self):
             pass
-    def do_all(self,G):
+    def do_all(self,G,solver):
         trees = []
         for g in nx.connected_components(G):
             tree = Custom_Tree()
             graph = G.subgraph(g)
-            tree.find_complete_subgraphs_in_connected_graph(graph, graph, None)
+            tree.find_complete_subgraphs_in_connected_graph(graph, graph, None,problem_solver=solver)
             trees.append(tree)
 
         # Print all trees
@@ -492,7 +492,7 @@ graph = GraphCreator().create_advanced_graph()
 #graph = GraphCreator().create_random_graph_with_weights(50, 0.5)
 #graph = NxGraphAssistant.analyze_cliques(graph,0.2)
 #NxGraphAssistant.plot_networkX_graph(graph)
-T = clusterMaster.do_all(graph)
+T = clusterMaster.do_all(graph,Custom_Tree.problem_handler_kill_tree_if_no_complete_subtree)
 #%%
 
 #%%
