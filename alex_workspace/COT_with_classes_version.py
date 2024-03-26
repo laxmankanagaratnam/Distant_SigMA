@@ -319,6 +319,8 @@ class Counter:
     def increment(self):
         self.count += 1
         return self.count
+    def reset(self):
+        self.count =0
 
 
 
@@ -340,9 +342,45 @@ class Custom_Tree:
         else:
             print("Parent node not found.")
         # return new node
-        return node_return           
-    
-        
+        return node_return
+
+    def add_node_efficent(self, parent, child_name):
+        if not self.root:
+            self.root = Custom_tree_node(child_name)
+            return self.root
+        node_return = self.root
+        if parent:
+            node_return = parent.add_child(Custom_tree_node(child_name))
+        else:
+            print("Parent node not found.")
+        return node_return
+
+    def get_size(self, node=None):
+        if not node:
+            node = self.root
+
+        if not node.children:
+            return 1
+
+        size = 1
+        for child in node.children:
+            size += self.get_size(child)
+
+        return size
+
+    def get_depth(self, node=None, depth=0):
+        if not node:
+            node = self.root
+
+        if not node.children:
+            return depth
+
+        max_depth = depth
+        for child in node.children:
+            child_depth = self.get_depth(child, depth + 1)
+            max_depth = max(max_depth, child_depth)
+
+        return max_depth
 
     def _find_node(self, node, target_uuid):
         if node.uuid == target_uuid:
@@ -389,7 +427,7 @@ class Custom_Tree:
                     print("-last node", last_node.name)
                     print("-most connected node", most_connected_node)
                     print("-current subgraph", current_subgraph)
-                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node)
+                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node,problem_solver=self.problem_handler_create_multiple_trees_on_conflict)
                
 
                     
@@ -425,32 +463,90 @@ class Custom_Tree:
                             print("new most connected nodes", new_most_connected_nodes)
                             self.problem_handler_kill_tree_if_no_complete_subtree(G, current_subgraph, new_most_connected_nodes, last_node, depth - 1, False)
 
-            if(correct_count.count > len(most_connected_nodes)/depth):
+        if(correct_count.count > len(most_connected_nodes)/depth):
+            for node in most_connected_nodes:
+                print("iteration")
+                most_connected_node = node
+                edited_graph = G.subgraph(current_graph).copy()
                 for node in most_connected_nodes:
-                    print("iteration")
-                    most_connected_node = node
-                    edited_graph = G.subgraph(current_graph).copy()
-                    for node in most_connected_nodes:
-                        if node != most_connected_node:
+                    if node != most_connected_node:
+                        edited_graph.remove_node(node)
+                for node in current_graph:
+                    if not NxGraphAssistant.connected(edited_graph, most_connected_node, node):
+                        try:
                             edited_graph.remove_node(node)
-                    for node in current_graph:
-                        if not NxGraphAssistant.connected(edited_graph, most_connected_node, node):
-                            try:
-                                edited_graph.remove_node(node)
-                            except:
-                                continue
-                    print("added:", most_connected_node)
-                    print("to parent", last_node.name)
-                    for current_subgraph in nx.connected_components(edited_graph):
-                        print("-last node", last_node.name)
-                        print("-most connected node", most_connected_node)
-                        print("-current subgraph", current_subgraph)
-                        self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node)
-                    
- 
-    def problem_handler_kill_tree_if_no_complete_subtree(self, G, current_graph, most_connected_nodes, last_node=None, depth=2, first=True):
+                        except:
+                            continue
+                print("added:", most_connected_node)
+                print("to parent", last_node.name)
+                for current_subgraph in nx.connected_components(edited_graph):
+                    print("-last node", last_node.name)
+                    print("-most connected node", most_connected_node)
+                    print("-current subgraph", current_subgraph)
+                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node,problem_solver=self.problem_handler_create_multiple_trees_on_conflict_advanced)
+        correct_count.reset()
+
+    def problem_handler_create_multiple_trees_on_conflict_advanced_v2(self, G, current_graph, most_connected_nodes,
+                                                                   last_node=None, depth=10, first=True,correct_count = None):
         '''
         Puts further nodes in the tree if at least one complete subgraph is found
+        '''
+        # Sort most_connected_nodes for deterministic behavior
+        most_connected_nodes = sorted(most_connected_nodes)
+        if correct_count is None:
+            correct_count = Counter()
+        for node in most_connected_nodes:
+            most_connected_node = node
+            edited_graph = graph.subgraph(current_graph).copy()
+            for node in most_connected_nodes:
+                if node != most_connected_node:
+                    edited_graph.remove_node(node)
+            for node in current_graph:
+                if not NxGraphAssistant.connected(edited_graph, most_connected_node, node):
+                    try:
+                        edited_graph.remove_node(node)
+                    except:
+                        continue
+            for current_subgraph in nx.connected_components(edited_graph):
+                # check if most connected node is in the subgraph
+                if most_connected_node in current_subgraph:
+                    if NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)):
+                        correct_count.increment()
+                    else:
+                        if depth > 1:
+                            current_subgraph.remove(most_connected_node)
+                            new_most_connected_nodes = NxGraphAssistant.all_most_connected_nodes(G, current_subgraph)
+                            print("new most connected nodes", new_most_connected_nodes)
+                            self.problem_handler_create_multiple_trees_on_conflict_advanced_v2(G, current_subgraph,
+                                                                                  new_most_connected_nodes, last_node,
+                                                                                  depth - 1, False,correct_count)
+        search_depth = self.get_depth(last_node)+1
+        print("Count smaller",correct_count.count,search_depth)
+        if (correct_count.count >= search_depth and first):
+            for node in most_connected_nodes:
+                print("iteration")
+                most_connected_node = node
+                edited_graph = G.subgraph(current_graph).copy()
+                for node in most_connected_nodes:
+                    if node != most_connected_node:
+                        edited_graph.remove_node(node)
+                for node in current_graph:
+                    if not NxGraphAssistant.connected(edited_graph, most_connected_node, node):
+                        try:
+                            edited_graph.remove_node(node)
+                        except:
+                            continue
+                print("added:", most_connected_node)
+                print("to parent", last_node.name)
+                for current_subgraph in nx.connected_components(edited_graph):
+                    print("-last node", last_node.name)
+                    print("-most connected node", most_connected_node)
+                    print("-current subgraph", current_subgraph)
+                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph, last_node,problem_solver=self.problem_handler_create_multiple_trees_on_conflict_advanced_v2)
+        correct_count.reset()
+    def problem_handler_kill_tree_if_no_complete_subtree(self, G, current_graph, most_connected_nodes, last_node=None, depth=3, first=True):
+        '''
+        Puts further nodes in the tree if at least one complete subgraph is found -> this also splits the tree if complete subgraph is found 
         '''
         # Sort most_connected_nodes for deterministic behavior
         most_connected_nodes = sorted(most_connected_nodes)
@@ -472,16 +568,17 @@ class Custom_Tree:
                 # check if most connected node is in the subgraph
                 if most_connected_node in current_subgraph:
                     print("most connected node in subgraph", current_subgraph)
-                    if NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)) or len(current_subgraph) == 1:
+                    if NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)):
                         if first:
                             name = ""
                             for node in current_subgraph:
                                 if name != "":
                                     name += "+"
                                 name += str(node)
-                            last_node = self.add_node(last_node.uuid, name)
+                            #last_node = self.add_node_efficent(last_node, name)
+                            self.add_node_efficent(last_node,name)
                             print("complete subgraph - success1", current_subgraph)
-                            return
+                            
 
                         else:
                             print("return true")
@@ -490,7 +587,11 @@ class Custom_Tree:
                         print("not complete subgraph", current_subgraph)
                         if depth > 1:
                             # new most connected nodes
+                            # remove most connected node from current subgraph
                             current_subgraph.remove(most_connected_node)
+                            # check if removed
+                            if most_connected_node in current_subgraph:
+                                print("error")
                             new_most_connected_nodes = NxGraphAssistant.all_most_connected_nodes(G, current_subgraph)
                             print("new most connected nodes", new_most_connected_nodes)
                             if self.problem_handler_kill_tree_if_no_complete_subtree(G, current_subgraph, new_most_connected_nodes, last_node, depth - 1, False):
@@ -498,11 +599,11 @@ class Custom_Tree:
                                     # add uppest node to the tree
                                     print("complete subgraph - success2", current_subgraph)
                                     print("most connected node", most_connected_node)
-                                    last_node = self.add_node(last_node.uuid, most_connected_node)
+                                    last_node = self.add_node_efficent(last_node, most_connected_node)
                                     for subgraph in nx.connected_components(G.subgraph(current_subgraph)):
                                         #new_most_connected_nodes = NxGraphAssistant.all_most_connected_nodes(G, subgraph)
                                         #self.problem_handler_kill_tree_if_no_complete_subtree(G, subgraph, new_most_connected_nodes, last_node, depth - 1)
-                                        self.find_complete_subgraphs_in_connected_graph(G, subgraph, last_node)
+                                        self.find_complete_subgraphs_in_connected_graph(G, subgraph, last_node,problem_solver=self.problem_handler_kill_tree_if_no_complete_subtree)
 
                                 else:
                                     print("complete subgraph - give further", current_subgraph)
@@ -516,7 +617,7 @@ class Custom_Tree:
         '''
         # Sort most_connected_nodes for deterministic behavior
         most_connected_nodes = sorted(most_connected_nodes)
-        
+        list_subgraphs = []
         for node in most_connected_nodes:
             print("iteration - kill")
             most_connected_node = node
@@ -524,32 +625,45 @@ class Custom_Tree:
             for node in most_connected_nodes:
                 if node != most_connected_node:
                     edited_graph.remove_node(node)
+                    print(edited_graph)
             for node in current_graph:
                 if not NxGraphAssistant.connected(edited_graph, most_connected_node, node):
                     try:
                         edited_graph.remove_node(node)
                     except:
                         continue
+
+            stop = False
             for current_subgraph in nx.connected_components(edited_graph):
                 # if contains most connected node
                 if most_connected_node in current_subgraph:
-                    if not NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)) or len(current_subgraph) == 1:
-                        return
-            for current_subgraph in nx.connected_components(edited_graph):
-                # add complete graph to tree
-                if most_connected_node in current_subgraph:
-                    name = ""
-                    for node in current_subgraph:
-                        if name != "":
-                            name += "+"
-                        name += str(node)
-                    if last_node is None:
-                        last_node = self.add_node(0,name)
-                    else:
-                        last_node = self.add_node(last_node.uuid,name)
+                    list_subgraphs.append(current_subgraph)
+                    if not NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)):
+                        print("Stop because",current_subgraph)
+                        print("most - ", most_connected_node)
+                        print("complete?",NxGraphAssistant.is_complete_graph(G.subgraph(current_subgraph)))
+                        stop = True
+            if stop:
+                return
+            
+        for current_subgraph in list_subgraphs:
+            # add complete graph to tree
+            tmp_last_node = None
+            if most_connected_node in current_subgraph:
+                name = ""
+                for node in current_subgraph:
+                    if name != "":
+                        name += "+"
+                    name += str(node)
+                if last_node is None:
+                    tmp_last_node = self.add_node(0,name)
+                else:
+                    tmp_last_node = self.add_node_efficent(last_node,name)
+            self.find_complete_subgraphs_in_connected_graph(G,current_graph,tmp_last_node,self.problem_handler_kill_tree_if_no_complete_subtree_all)
+        
 
-    def find_complete_subgraphs_in_connected_graph(self, G, current_graph, last_node=None, problem_solver = problem_handler_create_multiple_trees_on_conflict):
-        graph = G
+    def find_complete_subgraphs_in_connected_graph(self, G, current_graph, last_node, problem_solver):
+        self.graph = G
         if NxGraphAssistant.is_complete_graph(G.subgraph(current_graph)):
             name = ""
             for node in current_graph:
@@ -559,7 +673,7 @@ class Custom_Tree:
             if last_node is None:
                 last_node = self.add_node(0,name)
             else:
-                last_node = self.add_node(last_node.uuid,name)
+                last_node = self.add_node_efficent(last_node,name)
             
             print("complete graph", name)
         else:
@@ -572,8 +686,7 @@ class Custom_Tree:
                 print("case more than one most connected node")
                 print("most connected nodes", most_connected_nodes)
                 # print type of problem solver
-                print("problem solver", type(problem_solver))
-                problem_solver(self,G = G, current_graph = current_graph,most_connected_nodes = most_connected_nodes, last_node = last_node)
+                problem_solver(self,G, current_graph,most_connected_nodes, last_node)
             else:
                 print("case one most connected node")
                 most_connected_node = most_connected_nodes[0]
@@ -581,11 +694,11 @@ class Custom_Tree:
                 if last_node is None:
                     last_node = self.add_node(0,most_connected_node)
                 else:
-                    last_node = self.add_node(last_node.uuid,most_connected_node)
+                    last_node = self.add_node_efficent(last_node,most_connected_node)
                 edited_graph = G.subgraph(current_graph).copy()
                 edited_graph.remove_node(most_connected_node)
                 for current_subgraph in nx.connected_components(edited_graph):
-                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node)
+                    self.find_complete_subgraphs_in_connected_graph(G, current_subgraph,last_node,problem_solver)
 
 #%%
 
@@ -612,12 +725,18 @@ class ClusteringHandler():
 #%%
 clusterMaster = ClusteringHandler()
 #graph = GraphCreator.create_random_graph_with_weights(num_nodes=40, edge_probability=0.3)
-graph = GraphCreator.create_random_graph_with_weights(100,0.3)
-#graph = GraphCreator().create_GraphX2()
+#graph = GraphCreator.create_random_graph_with_weights(30,0.3)
+graph = GraphCreator().create_advanced_graph()
 #graph = GraphCreator().create_random_graph_with_weights(50, 0.5)
 #graph = NxGraphAssistant.analyze_cliques(graph,0.2)
 #NxGraphAssistant.plot_networkX_graph(graph)
-T = clusterMaster.do_all(graph,Custom_Tree.problem_handler_kill_tree_if_no_complete_subtree)
+T = clusterMaster.do_all(graph,Custom_Tree.problem_handler_create_multiple_trees_on_conflict_advanced_v2)	
+# print tree depth and size
+for tree in T:
+    print("Depth:", tree.get_depth())
+    print("Size:", tree.get_size())
+    print("")
+
 #%%
 
 #%%

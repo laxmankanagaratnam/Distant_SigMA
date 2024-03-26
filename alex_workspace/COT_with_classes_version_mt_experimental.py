@@ -770,7 +770,7 @@ class ClusteringHandler():
 
 #%%
 clusterMaster = ClusteringHandler()
-graph = GraphCreator.create_random_graph_with_weights(70,0.2)
+graph = GraphCreator.create_random_graph_with_weights(30,0.2)
     
 #%%
 
@@ -782,7 +782,7 @@ graph = GraphCreator.create_random_graph_with_weights(70,0.2)
 #NxGraphAssistant.plot_networkX_graph(graph)
 # start time measurement
 start_time1 = time.time()
-#T1 = clusterMaster.do_all(graph,Custom_Tree.problem_handler_create_multiple_trees_on_conflict_advanced)
+T1 = clusterMaster.do_all_advanced(graph,Custom_Tree.problem_handler_create_multiple_trees_on_conflict_advanced_mt)
 end_time1 = time.time()
 start_time2 = time.time()
 graph = NxGraphAssistant().analyze_cliques(graph,0.5)
@@ -790,14 +790,14 @@ T2 = clusterMaster.do_all(graph,Custom_Tree.problem_handler_create_multiple_tree
 end_time2 = time.time()
 print("Time v1:" , end_time1 - start_time1)
 print("Time v2:" , end_time2 - start_time2)
-'''
+
 for tree in T1:
     # print size and depth of tree
     print("Tree1")
     print("Size:", tree.get_size())
     print("Depth:", tree.get_depth())
     #tree.print_tree()
-'''
+
 for tree in T2:
     # print size and depth of tree
     print("Tree2")
