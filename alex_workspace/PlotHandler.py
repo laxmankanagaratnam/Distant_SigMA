@@ -284,46 +284,56 @@ def plot2D(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: s
     
     
 class PlotHandler:
-    output_path = ""
-    data_path = ""
-    df_region = None
-    prefix = ""
-    count = 0
-    tmp = None
-    r = 0
+    """
+    A class to manage data processing and visualization for different clusters within a given region.
+
+    Attributes:
+        output_path (str): Directory path where plots will be saved.
+        data_path (str): Directory path where data files are stored.
+        df_region (DataFrame): Pandas DataFrame containing region-specific data.
+        prefix (str): Prefix used to identify specific columns in data frames.
+        count (int): Count of columns that start with the specified prefix.
+        tmp (list): Temporary storage used for data manipulation.
+        r (int): Index specifying a particular region.
+    """
     
-    def __init__(self, tmp2 ,orion_index = 0,path = "",data_path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\3D_plotting\3D_plotting\Region_dataframes/'):
-                # change to where you want to save your plots
+    def __init__(self, tmp2, orion_index=0, path="", data_path=r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\3D_plotting\3D_plotting\Region_dataframes/'):
+        """
+        Initializes the PlotHandler with paths and region-specific data.
+
+        Args:
+            tmp2 (list): A temporary list used to store label data.
+            orion_index (int): Index for selecting a specific Orion region. Defaults to 0.
+            path (str): Output path for saving plots. Defaults to an empty string.
+            data_path (str): Path where region data files are located. Defaults to a specified path.
+        """
         self.output_path = path
-
-        # change to the location of the directory containing the label data
         self.data_path = data_path
-
-        # Orion is split into 5 regions (numbered 0 - 4)
-        ## Region 2 is the largest (22 groups)
-        ## Regions 0 and 4 are the smallest
-
+        self.tmp = tmp2
         regions = [f'Region_{float(i)}_sf_200_grouped_solutions.csv' for i in range(5)]
-        # pick the region you want to work with
         self.r = orion_index
         region = regions[self.r]
 
-        # read in the dataframe
-        
-        if orion_index == 2:
-            region_part_1 = pd.read_csv(data_path+f'Region_{float(2)}_sf_200_grouped_solutions-1.csv')
-            region_part_2 = pd.read_csv(data_path+f'Region_{float(2)}_sf_200_grouped_solutions-2.csv')
+        if orion_index == 2:  # Special case for region 2 which is split into two parts.
+            region_part_1 = pd.read_csv(data_path + f'Region_{float(2)}_sf_200_grouped_solutions-1.csv')
+            region_part_2 = pd.read_csv(data_path + f'Region_{float(2)}_sf_200_grouped_solutions-2.csv')
             self.df_region = pd.concat([region_part_1, region_part_2])
-            
         else:
-            self.df_region = pd.read_csv(data_path+region)
+            self.df_region = pd.read_csv(data_path + region)
 
-        prefix = 'cluster_label_group'
-        self.tmp = tmp2
-        # Count columns with the specified prefix
-        count = sum(1 for col in self.df_region.columns if col.startswith(prefix))
+        self.prefix = 'cluster_label_group'
+        self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
     
     def labels_single_node(self,node):
+        """
+        Extracts and processes label data for a single node based on the temporary data list.
+
+        Args:
+            node (Custom_tree_node): A node from which labels are extracted.
+
+        Returns:
+            numpy.ndarray: An array of label data processed from the node.
+        """
         local_list = []
         for sub_node in node.name.split("+"):
             local_list.append(self.tmp[int(sub_node)])
@@ -339,6 +349,16 @@ class PlotHandler:
         return upgraded_list
         
     def compare_two_clusters(self,list1,list2):
+        """
+        Compares labels between two clusters and identifies unique and shared labels.
+
+        Args:
+            list1 (list): First cluster of nodes.
+            list2 (list): Second cluster of nodes.
+
+        Returns:
+            numpy.ndarray: An array showing the result of the comparison between the two clusters.
+        """
         global_list = []
         local_list = []
         local_list2 = []
@@ -364,6 +384,16 @@ class PlotHandler:
         return upgraded_list
     
     def compare_two_clusters_marke_shared(self,list1,list2):
+        """
+        Marks shared labels between two clusters with cluster 2 (list1 = 0, list2 = 1, shared = 2)
+
+        Args:
+            list1 (list): First cluster of nodes.
+            list2 (list): Second cluster of nodes.
+
+        Returns:
+            numpy.ndarray: An array marking shared labels between the two clusters.
+        """
         global_list = []
         local_list = []
         local_list2 = []
@@ -415,6 +445,15 @@ class PlotHandler:
         return upgraded_list
 
     def print_trees_leaf_low_or(self,tree_list):
+        """
+        Analyzes and prints labels for the leaves of the trees using logical OR.
+
+        Args:
+            tree_list (list): A list of trees whose leaves will be analyzed.
+
+        Returns:
+            numpy.ndarray: An array of labels processed using logical OR among the leaves.
+        """
         list_alex = []
         # check if tree_list is a list
         if not isinstance(tree_list, list):
@@ -445,6 +484,15 @@ class PlotHandler:
     
     
     def print_trees_leaf_low_majority(self,tree_list):
+        """
+        Analyzes and prints labels for the leaves of the trees based on majority rule.
+
+        Args:
+            tree_list (list): A list of trees whose leaves will be analyzed.
+
+        Returns:
+            numpy.ndarray: An array of labels indicating the majority label among the leaves.
+        """
         list_alex = []
         # check if tree_list is a list
         if not isinstance(tree_list, list):
@@ -475,6 +523,15 @@ class PlotHandler:
     
     
     def print_trees_tree_wise_or(self,tree_list):
+        """
+        Processes and prints labels for entire trees using logical OR.
+
+        Args:
+            tree_list (list): A list of trees to be analyzed.
+
+        Returns:
+            numpy.ndarray: An array of labels processed using logical OR across each tree.
+        """
         list_alex = []
         if not isinstance(tree_list, list):
             tree_list = [tree_list]
@@ -498,6 +555,15 @@ class PlotHandler:
         return upgraded_list
     
     def print_trees_tree_wise_majority(self,tree_list):
+        """
+        Processes and prints labels for entire trees based on majority rule.
+
+        Args:
+            tree_list (list): A list of trees to be analyzed.
+
+        Returns:
+            numpy.ndarray: An array indicating the majority label across each tree.
+        """
         list_alex = []
         if not isinstance(tree_list, list):
             tree_list = [tree_list]
@@ -524,6 +590,12 @@ class PlotHandler:
         return upgraded_list
     
     def plot_tree(self, tree_list):
+        """
+        Initiates plotting for a list of trees, beginning from the root.
+
+        Args:
+            tree_list (list): A list of trees to be plotted.
+        """
         """ Plot all trees in the list. """
         for tree in tree_list:
             if tree.root.name == "root":
@@ -534,6 +606,13 @@ class PlotHandler:
                 self.plot_tree_recursive(tree.root,True)
 
     def plot_tree_recursive(self, node,top = False):
+        """
+        Recursively plots a tree starting from the given node.
+
+        Args:
+            node (Custom_tree_node): The starting node for the plot.
+            top (bool): Indicates if the node is the top node of its subtree.
+        """
         """ Recursive function to plot a tree starting from a node. """
         
         current_node = node
@@ -572,10 +651,24 @@ class PlotHandler:
                 
     
     def plot_labels_3D(self,labels, title = ""):
+        """
+        Plots the labels in a 3D space. HDR and Velocity
+
+        Args:
+            labels (numpy.ndarray): Labels to plot.
+            title (str): Title for the plot.
+        """
         # Plot the clusters
         fig = plot3D(labels, self.df_region, title, self.output_path, hrd= True, return_fig=True)
         fig.show()
     def plot_labels_2D(self,labels, title = ""):
+        """
+        Plots the labels in a 2D space.
+
+        Args:
+            labels (numpy.ndarray): Labels to plot.
+            title (str): Title for the plot.
+        """
         # Plot the clusters
         fig = plot2D(labels, self.df_region, title, self.output_path, hrd= True, return_fig=True)
         fig.show()

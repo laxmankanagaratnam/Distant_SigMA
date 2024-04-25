@@ -5,21 +5,30 @@ import uuid
 import numpy as np
 
 class Custom_tree_node:
+    """Defines a node for use in a custom tree structure.
+
+    Attributes:
+        name (str): The name or label of the node.
+        uuid (UUID): A unique identifier for the node, automatically generated.
+        children (list): A list of child nodes.
+        parent (Custom_tree_node, optional): A reference to the parent node.
+    """
     def __init__(self, name):
+        """Initialize a new instance of Custom_tree_node."""
         self.name = name
         self.uuid = uuid.uuid4()
         self.children = []
         self.parent = None 
 
-    def add_child(self, child) -> 'Custom_tree_node':
+    def add_child(self, child):
+        """Add a child node to this node."""
         child.parent = self
         self.children.append(child)
         return child 
 
-    def get_all_parts(self) -> list[str]:
+    def get_all_parts(self):
+        """Splits the node's name by '+' and returns each part as a list."""
         parts = []
-        # split name by '+' and add each part to the list
-        # check if self.name is list
         if isinstance(self.name, list):
             for part in self.name.split("+"):
                 parts.append(part)
@@ -27,10 +36,9 @@ class Custom_tree_node:
             parts.append(self.name)
         return parts
     
-    def get_all_parts_with_children_recurive(self) -> list[str]:
+    def get_all_parts_with_children_recurive(self):
+        """Recursively fetch all parts of this node and its children's names, splitting by '+'."""
         parts = []
-        # split name by '+' and add each part to the list
-        # check if self.name is list
         if not isinstance(self.name, np.int64):
             for part in self.name.split("+"):
                 if self.name != "root":
@@ -40,32 +48,33 @@ class Custom_tree_node:
                 parts.append(self.name)
         for child in self.children:
             parts += child.get_all_parts_with_children_recurive()
-
         return parts
     
     def create_own_hash(self):
-        # create hasx from self.name
+        """Generates a hash based on the node's name."""
         return hash(self.name)
+
     def get_child_hash(self):
+        """Generates a hash by concatenating the names of all child nodes."""
         sum_name = ""
         for child in self.children:
             sum_name += child.name
         return hash(sum_name)
+
     def create_child_hash(self):
+        """Creates a hash from the names of all descendants, traversing the tree breadth-first."""
         sum_name = ""
-        child_list = []
-        child_list.append(self)
-        while(len(child_list)>0):
-            for item in child_list:
-                for child in item.children:
-                    sum_name += str(child.name)
-                    
-                    if child.children:
-                        child_list.append(child)
-                child_list.remove(item)
+        child_list = [self]
+        while child_list:
+            current = child_list.pop(0)
+            for child in current.children:
+                sum_name += str(child.name)
+                if child.children:
+                    child_list.append(child)
         return hash(sum_name)
-        
+
     def get_complete_hash(self):
+        """Generates a composite hash combining the node's own hash and its descendants' hash."""
         return hash(self.create_own_hash() + self.create_child_hash())
         
     
@@ -305,15 +314,7 @@ class Custom_Tree:
         return False
     
     def improved_problem_handler_create_multiple_trees_on_conflict(self, current_graph, most_connected_nodes, last_node=None):
-        """
-        Handles conflicts by creating multiple subtrees for each most connected node and adds them to the tree.
 
-        Args:
-        - current_graph: The current graph.
-        - most_connected_nodes: The most connected nodes in the current graph.
-        - last_node: The last node added to the tree. Defaults to None.
-
-        """
         #print ("Improved Problem Handler")
         saved_node = last_node
         for most_connected_node in most_connected_nodes:
@@ -355,15 +356,7 @@ class Custom_Tree:
     
     
     def dynamic_problem_handler_create_multiple_trees_on_conflict(self, current_graph, most_connected_nodes, last_node=None):
-        """
-        Handles conflicts by creating multiple subtrees for each most connected node and adds them to the tree.
 
-        Args:
-        - current_graph: The current graph.
-        - most_connected_nodes: The most connected nodes in the current graph.
-        - last_node: The last node added to the tree. Defaults to None.
-
-        """
         current_depth = self.get_depth()
         #print ("Dynamic Problem Handler")
 
@@ -712,7 +705,7 @@ class Custom_Tree:
         - G: The graph.
         - current_graph: The current graph.
         - last_node: The last node added to the tree.
-        - problem_solver: The problem solver function to handle conflicts.
+        - problem_solver: The problem solver function to handle conflicts. (case when there is more than one most connected node in the graph at any step)
 
         """
         self.graph = G

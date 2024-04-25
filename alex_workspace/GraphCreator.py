@@ -18,6 +18,16 @@ import pandas as pd
 
 
 def get_orion_data(num):
+    '''
+    Load the Orion dataset and return the graph that represents the data.
+    
+    Args:
+        num (int): The region of the Orion dataset to load. Must be in the range [0, 4].
+
+    Returns:
+        nx.Graph: The graph with merged nodes.
+        translation (dict): A dictionary that maps the original node labels to the new node labels.
+    '''
     # change to the location of the directory containing the label data
     label_path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\Grouped_solution_labels\Grouped_solution_labels/'
 
@@ -200,5 +210,15 @@ class GraphCreator():
             uv += 1
         return G
     def get_get_orion(self,num=1):
+        '''
+        Load the Orion dataset and return the graph that represents the data.
+        
+        Args:
+            num (int): The region of the Orion dataset to load. Must be in the range [0, 4].
+
+        Returns:
+            nx.Graph: The graph with merged nodes.
+            translation (dict): A dictionary that maps the original node labels to the new node labels.
+        '''
         return get_orion_data(num)
     
