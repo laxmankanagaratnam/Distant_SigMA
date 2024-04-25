@@ -1230,12 +1230,13 @@ import time
 # Measure time for the first code snippet
 
 
-graph = NxGraphAssistant.remove_edges_with_minor(graph_base,'weight',0.5,0.6)
-graph = NxGraphAssistant.analyze_cliques_new(graph,0.8)
+
 
 
 graph2 = NxGraphAssistant.remove_edges(graph_base,similarity='weight',threshold=0.2)
 graph2 = NxGraphAssistant.analyze_cliques_new(graph2,0.8)
+
+graph = graph2
 
 # print the size of of both graphs
 print("Size of graph1:", len(graph))
@@ -1265,3 +1266,39 @@ clusterMaster.print(T)
 clusterMaster.print(Z)
 for tree in T:
     tree.print_tree()
+    
+import pandas as pd
+from plotting_tool_3D import plot
+
+# change to where you want to save your plots
+output_path = ""
+
+# change to the location of the directory containing the label data
+data_path = r"C:\Users\Alexm\Downloads\3D_plotting\Region_dataframes/"
+
+# Orion is split into 5 regions (numbered 0 - 4)
+## Region 2 is the largest (22 groups)
+## Regions 0 and 4 are the smallest
+
+regions = [f'Region_{float(i)}_sf_200_grouped_solutions.csv' for i in range(5)]
+# pick the region you want to work with
+r = 0
+region = regions[r]
+
+# read in the dataframe
+df_region = pd.read_csv(data_path+region)
+
+
+
+
+prefix = 'cluster_label_group'
+
+# Count columns with the specified prefix
+count = sum(1 for col in df_region.columns if col.startswith(prefix))
+
+print(f"There are {count} grouped solutions available for Orion-region: {r}.")
+
+for grouped_sol in range(count):
+    labels = df_region.loc[:, prefix+f"_{grouped_sol}"].to_numpy()
+    fig = plot(labels=labels, df=df_region, filename=f"test_grouped_sol_{grouped_sol}", output_pathname= output_path, hrd = True, icrs = False, return_fig = True)
+    fig.show()
