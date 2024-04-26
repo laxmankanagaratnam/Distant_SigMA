@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 from Tree import Custom_Tree
+from Tree import Custom_tree_node
 
 
 def plot3D(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: str = None, hrd: bool = False,
@@ -617,27 +618,7 @@ class PlotHandler:
                 self.iterate_tree_merge(tree.root,out_tree)
         return out_tree
                 
-                
-    def iterate_tree_merge_recursive(self, node,out_tree):
-        """
-        Recursively visits all nodes in a tree using depth-first search (DFS).
-        Needs merging function, please merge not in the same tree while iterating it use a second tree to merge the nodes
 
-        Args:
-            node (Custom_tree_node): The current node to process.
-        """
-        # Process the current node here (if any processing is needed)
-        print(f"Visiting node: {node.name}")
-
-        # Recursively visit each child node
-        for child in node.children:
-            self.iterate_tree_merge_recursive(child)
-            
-        if not node.children:
-            # create all possible combinations with siblings
-            for sibling in node.parent.children:
-                pass
-            # try with parent node to merge
             
             
             

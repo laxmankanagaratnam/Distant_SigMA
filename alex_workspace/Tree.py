@@ -3,6 +3,7 @@ from NxGraphAssistant import NxGraphAssistant
 import networkx as nx
 import uuid
 import numpy as np
+from itertools import combinations
 
 class Custom_tree_node:
     """Defines a node for use in a custom tree structure.
@@ -121,7 +122,12 @@ class Custom_Tree:
         list[Custom_tree_node]: A list of leaf nodes in the tree.
         """
         leaf_nodes = []
-        stack = [self.root]
+        stack = []
+        if self.root.name == "root":
+            for child in self.root.children:
+                stack.append(child)
+        else:
+            stack = [self.root]
 
         while stack:
             node = stack.pop()
@@ -131,6 +137,140 @@ class Custom_Tree:
                 stack.extend(node.children)
 
         return leaf_nodes
+    
+    def leave_one_node_per_parent_in_list(node_list):
+        """
+        Ensures that only one node per parent is left in the provided list of tree nodes.
+
+        This method operates by tracking parent nodes and their children. If a parent node is
+        encountered multiple times in the list, only the first occurrence of its child is kept.
+
+        Args:
+            node_list (list[Custom_tree_node]): The list of tree nodes to be processed.
+
+        Returns:
+            list[Custom_tree_node]: A list of tree nodes with only one child node per parent.
+        """
+        seen_parents = {}
+        result_list = []
+
+        for node in node_list:
+            if node.parent not in seen_parents:
+                # If the parent has not been seen, add the first child encountered to the result list.
+                seen_parents[node.parent] = node
+                result_list.append(node)
+
+        return result_list
+    def all_combinations(input_list):
+        # Remove duplicates by converting the list to a set
+        unique_items = list(set(input_list))
+        
+        # List to store all the combinations
+        all_combs = []
+        
+        # Generate combinations for every possible length
+        for r in range(1, len(unique_items) + 1):
+            # itertools.combinations generates combinations of length r
+            combs = combinations(unique_items, r)
+            # Append each combination to the list
+            for comb in combs:
+                all_combs.append(comb)
+        return all_combs
+    
+    @DeprecationWarning
+    # do not use that yet
+    def iterate_tree_merge(self):
+        out_tree = Custom_Tree()
+        nodes_to_process = self.get_leaf_nodes()
+        nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
+        stop = False
+        while(not stop):
+            similarity_parent = np.random.rand()
+            for node in nodes_to_process:
+                #check if parents exists
+                if node.parent:
+                    option = []
+                    # compare all on the same level 
+                    other_children = node.parent.children
+                    # put all possible combinations of kids into a stack with all possible lenghts
+                    # combination between all children not only between node and other children
+                    combinations = Custom_Tree.all_combinations(other_children)
+                    for combination in combinations:
+                        # caculate similairty use random for now 
+                        # if similarity is high enough merge them together
+                        
+                        similarity = np.random.rand()
+                        
+                        similarity_to_parent = np.random_rand()
+                        #TODO that stuff
+                        
+                        
+                        if similarity > similarity_parent:
+                            # merge the nodes together
+                            # get name of all nodes in combination
+                            name = ""
+                            for child in combination:
+                                name += child.name + "+"
+                            new_node = Custom_tree_node(name)
+                            option.append(new_node,similarity)
+                        if similarity_to_parent > similarity_parent:
+                            # merge the nodes together
+                            # get name of all nodes in combination
+                            name = ""
+                            for child in combination:
+                                name += child.name + "+"
+                            new_node = Custom_tree_node(name)
+                            option.append(new_node,similarity_to_parent)
+                else:
+                    # the end i guess
+                    continue
+            if option:
+                # sort options by similarity
+                option.sort(key=lambda x: x[1])
+                # add the best option to the tree
+                tree_node = option[0][0]
+                out_tree.add_node(tree_node)
+                return out_tree
+            # add all parents to the nodes to process
+            parents = []
+            for node in nodes_to_process:
+                if node.parent:
+                    parents.append(node.parent)
+            nodes_to_process = parents
+            if not nodes_to_process:
+                stop = True
+        return out_tree
+
+                    
+    def iterate_tree_merge2(self):
+        out_tree = Custom_Tree()
+        nodes_to_process = self.get_leaf_nodes()
+        nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
+        
+        while nodes_to_process:
+            option = []
+            for node in nodes_to_process:
+                if node.parent:
+                    combinations = Custom_Tree.all_combinations(node.parent.children)
+                    for combination in combinations:
+                        similarity = np.random.rand()  # Placeholder for actual similarity calculation
+                        if similarity > np.random.rand():  # Random threshold comparison
+                            name = "+".join(child.name for child in combination)  # Combine names of merged nodes
+                            new_node = Custom_tree_node(name)
+                            option.append((new_node, similarity))
+            
+            if option:
+                option.sort(key=lambda x: x[1], reverse=True)  # Sort options by descending similarity
+                best_option = option[0][0]
+                out_tree.add_node(best_option)  # Add the best option to the output tree
+
+            nodes_to_process = [node.parent for node in nodes_to_process if node.parent]
+
+        return out_tree
+
+            
+    
+    
     def add_node(self, parent_uuid, child_name):
         """
         Adds a new node with the given child name as a child of the node with the specified parent UUID.
