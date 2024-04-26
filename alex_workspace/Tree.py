@@ -16,7 +16,7 @@ class Custom_tree_node:
     """
     def __init__(self, name):
         """Initialize a new instance of Custom_tree_node."""
-        self.name = name
+        self.name =  str(name)
         self.uuid = uuid.uuid4()
         self.children = []
         self.parent = None
@@ -78,6 +78,16 @@ class Custom_tree_node:
     def get_complete_hash(self):
         """Generates a composite hash combining the node's own hash and its descendants' hash."""
         return hash(self.create_own_hash() + self.create_child_hash())
+    
+    def __repr__(self) -> str:
+        """Returns a string representation of the node."""
+        if isinstance(self.name, np.int64):
+            return str(self.name)
+        
+        if self.name == "root":
+            return "root"
+        
+        return self.name
         
     
     
@@ -149,11 +159,9 @@ class Custom_Tree:
                 stack.extend(node.children)
 
         return leaf_nodes
-    def similarity_for_n_lists(self,lists):
-        # can be 1 to inf
-        return np.random.rand(0,1)
-
-        return np.random.rand(0,1)
+    def similarity_for_n_lists(lists):
+        # return single random value between 0 and 1
+        return np.random.rand()
     def leave_one_node_per_parent_in_list(node_list):
         """
         Ensures that only one node per parent is left in the provided list of tree nodes.
@@ -193,100 +201,79 @@ class Custom_Tree:
                 all_combs.append(comb)
         return all_combs
     
-    @DeprecationWarning
-    # do not use that yet
-    def iterate_tree_merge(self):
-        out_tree = Custom_Tree()
-        nodes_to_process = self.get_leaf_nodes()
-        nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
-        stop = False
-        while(not stop):
-            similarity_parent = np.random.rand()
-            for node in nodes_to_process:
-                #check if parents exists
-                if node.parent:
-                    option = []
-                    # compare all on the same level 
-                    other_children = node.parent.children
-                    # put all possible combinations of kids into a stack with all possible lenghts
-                    # combination between all children not only between node and other children
-                    combinations = Custom_Tree.all_combinations(other_children)
-                    for combination in combinations:
-                        # caculate similairty use random for now 
-                        # if similarity is high enough merge them together
-                        
-                        similarity = Custom_Tree.similarity_for_n_lists()
-                        
-                        similarity_to_parent = np.random_rand()
-                        #TODO that stuff
-                        
-                        
-                        if similarity > similarity_parent:
-                            # merge the nodes together
-                            # get name of all nodes in combination
-                            name = ""
-                            for child in combination:
-                                name += child.name + "+"
-                            new_node = Custom_tree_node(name)
-                            option.append(new_node,similarity)
-                        if similarity_to_parent > similarity_parent:
-                            # merge the nodes together
-                            # get name of all nodes in combination
-                            name = ""
-                            for child in combination:
-                                name += child.name + "+"
-                            new_node = Custom_tree_node(name)
-                            option.append(new_node,similarity_to_parent)
-                else:
-                    # the end i guess
-                    continue
-            if option:
-                # sort options by similarity
-                option.sort(key=lambda x: x[1])
-                # add the best option to the tree
-                tree_node = option[0][0]
-                out_tree.add_node(tree_node)
-                return out_tree
-            # add all parents to the nodes to process
-            parents = []
-            for node in nodes_to_process:
-                if node.parent:
-                    parents.append(node.parent)
-            nodes_to_process = parents
-            if not nodes_to_process:
-                stop = True
-        return out_tree
-
+    def merge(self):
+        leafs = self.get_leaf_nodes()
+        print("leafs start:",leafs)
+        while(leafs):
+            leafs = Custom_Tree.leave_one_node_per_parent_in_list(leafs)
+            print("leafs after leave one node per parent:",leafs)
+            next_leafs = []
+            options = []
+            for item in leafs:
+                if item.parent:
+                    base_similarity = Custom_Tree.similarity_for_n_lists([item.parent])
+                    print("base_similarity",base_similarity)
+                    combinations = Custom_Tree.all_combinations(item.parent.children)
+                    for comb in combinations:
+                        print("comb",comb)
+                        # calculate similarity between each combination
+                        similarity = Custom_Tree.similarity_for_n_lists(list(comb))
+                        comb_with_parent = [item.parent] + list(comb)
+                        similarity_to_parent = Custom_Tree.similarity_for_n_lists(comb_with_parent)
+                        print("step similarity",similarity,similarity_to_parent)
+                        if similarity_to_parent > base_similarity:
+                            options.append([comb,similarity_to_parent,item.parent,False])
+                        if similarity > base_similarity:
+                            options.append([comb,similarity,item.parent,True])
                     
-    def iterate_tree_merge2(self):
-        out_tree = Custom_Tree()
-        nodes_to_process = self.get_leaf_nodes()
-        while nodes_to_process:
-            nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
-            option = []
-            for node in nodes_to_process:
-                if node.parent:
-                    combinations = Custom_Tree.all_combinations(node.parent.children)
-                    parent_internel_similarity = Custom_Tree.similarity_for_n_lists([node.parent.children])
-                    for combination in combinations:
-                        similarity = Custom_Tree.similarity_for_n_lists(item for item in combination)
-                        similarity_to_parent = Custom_Tree.similarity_for_n_lists([node.parent] + [item for item in combination])
-                        if similarity > parent_internel_similarity:  # Random threshold comparison
-                            name = "+".join(child.name for child in combination)  # Combine names of merged nodes
+                    if len(options) > 0:
+                        print("options",options)
+                        # sort options by similarity put highest first
+                        options = sorted(options,key=lambda x: x[1],reverse=True)
+                        # get first option
+                        first_option = options[0]
+                        if first_option[3]:
+                            # merge with parent
+                            name = ""
+                            for node in first_option[0]:
+                                if isinstance(node.name,np.int64):
+                                    name += str(node.name) + "+"
+                                name += node.name + "+"
+                            if name[-1] == "+":
+                                name = name[:-1]
+                            parent = first_option[2]
+                            # check if parent has a parent
                             new_node = Custom_tree_node(name)
-                            option.append((new_node, similarity,node.parent))
-                        if similarity_to_parent > parent_internel_similarity:  # Random threshold comparison
-                            name = "+".join(child.name for child in combination)  # Combine names of merged nodes
+                            if parent.parent:
+                                parent.parent.children.append(Custom_tree_node(name))
+                            next_leafs.append(item.parent)
+                            print("merged with parent",name)
+                            
+                        else:
+                            #merge not with parent
+                            name = ""
+                            for node in first_option[0]:
+                                if isinstance(node.name,np.int64):
+                                    name += str(node.name) + "+"
+                                name += node.name + "+"
+                            # check last character is + 
+                            if name[-1] == "+":
+                                name = name[:-1]
                             new_node = Custom_tree_node(name)
-                            option.append((new_node, similarity_to_parent),node.parent)
-            
-            if option:
-                option.sort(key=lambda x: x[1], reverse=True)  # Sort options by descending similarity
-                best_option = option[0][0]
-                out_tree.add_node(best_option)  # Add the best option to the output tree
-
-            nodes_to_process = [node.parent for node in nodes_to_process if node.parent]
-        return out_tree
+                            parent = first_option[2]
+                            parent.children = [new_node]
+                            print("merged not with parent",name)
+                            next_leafs.append(item.parent)
+                    else:
+                        item.parent.children = []
+                        next_leafs.append(item.parent)
+                        print("no options found")
+                    options = []
+                else:
+                    print("no parent found")
+                    # if no parent is available
+                    pass
+            leafs = next_leafs         
 
             
     
