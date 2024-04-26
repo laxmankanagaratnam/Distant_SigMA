@@ -389,6 +389,7 @@ class PlotHandler:
     def compare_two_clusters_marke_shared(self,list1,list2):
         """
         Marks shared labels between two clusters with cluster 2 (list1 = 0, list2 = 1, shared = 2)
+        In each of the list all stars are included which are in least one of the clusters 
 
         Args:
             list1 (list): First cluster of nodes.
@@ -607,16 +608,6 @@ class PlotHandler:
                     
             else:
                 self.plot_tree_recursive(tree.root,True)
-                
-    def iterate_tree_merge(self,tree_list):
-        out_tree = Custom_Tree()
-        for tree in tree_list:
-            if tree.root.name == "root":
-                for child_node in tree.root.children:
-                    self.iterate_tree_merge(child_node,out_tree)
-            else:
-                self.iterate_tree_merge(tree.root,out_tree)
-        return out_tree
                 
 
             

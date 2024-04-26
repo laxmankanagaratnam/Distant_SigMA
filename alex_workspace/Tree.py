@@ -19,7 +19,8 @@ class Custom_tree_node:
         self.name = name
         self.uuid = uuid.uuid4()
         self.children = []
-        self.parent = None 
+        self.parent = None
+        self.visited = False
 
     def add_child(self, child):
         """Add a child node to this node."""
@@ -108,6 +109,17 @@ class Custom_Tree:
         self.root = None
         self.graph = nx.Graph()
         self.combined_history = {}
+        
+    def remove_node(self, node):
+        node = self._find_node(self.root, node.uuid)
+        if node:
+            if node.parent:
+                node.parent.children.remove(node)
+            else:
+                self.root = None
+                
+
+        
     
     def get_leaf_nodes(self) -> list[Custom_tree_node]:
         """
@@ -137,13 +149,17 @@ class Custom_Tree:
                 stack.extend(node.children)
 
         return leaf_nodes
-    
+    def similarity_for_n_lists(self,lists):
+        # can be 1 to inf
+        return np.random.rand(0,1)
+
+        return np.random.rand(0,1)
     def leave_one_node_per_parent_in_list(node_list):
         """
         Ensures that only one node per parent is left in the provided list of tree nodes.
 
         This method operates by tracking parent nodes and their children. If a parent node is
-        encountered multiple times in the list, only the first occurrence of its child is kept.
+        encountered multiple times in the list,  13666only the first occurrence of its child is kept.
 
         Args:
             node_list (list[Custom_tree_node]): The list of tree nodes to be processed.
@@ -199,7 +215,7 @@ class Custom_Tree:
                         # caculate similairty use random for now 
                         # if similarity is high enough merge them together
                         
-                        similarity = np.random.rand()
+                        similarity = Custom_Tree.similarity_for_n_lists()
                         
                         similarity_to_parent = np.random_rand()
                         #TODO that stuff
@@ -245,19 +261,24 @@ class Custom_Tree:
     def iterate_tree_merge2(self):
         out_tree = Custom_Tree()
         nodes_to_process = self.get_leaf_nodes()
-        nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
-        
         while nodes_to_process:
+            nodes_to_process = Custom_Tree.leave_one_node_per_parent_in_list(nodes_to_process)
             option = []
             for node in nodes_to_process:
                 if node.parent:
                     combinations = Custom_Tree.all_combinations(node.parent.children)
+                    parent_internel_similarity = Custom_Tree.similarity_for_n_lists([node.parent.children])
                     for combination in combinations:
-                        similarity = np.random.rand()  # Placeholder for actual similarity calculation
-                        if similarity > np.random.rand():  # Random threshold comparison
+                        similarity = Custom_Tree.similarity_for_n_lists(item for item in combination)
+                        similarity_to_parent = Custom_Tree.similarity_for_n_lists([node.parent] + [item for item in combination])
+                        if similarity > parent_internel_similarity:  # Random threshold comparison
                             name = "+".join(child.name for child in combination)  # Combine names of merged nodes
                             new_node = Custom_tree_node(name)
-                            option.append((new_node, similarity))
+                            option.append((new_node, similarity,node.parent))
+                        if similarity_to_parent > parent_internel_similarity:  # Random threshold comparison
+                            name = "+".join(child.name for child in combination)  # Combine names of merged nodes
+                            new_node = Custom_tree_node(name)
+                            option.append((new_node, similarity_to_parent),node.parent)
             
             if option:
                 option.sort(key=lambda x: x[1], reverse=True)  # Sort options by descending similarity
@@ -265,7 +286,6 @@ class Custom_Tree:
                 out_tree.add_node(best_option)  # Add the best option to the output tree
 
             nodes_to_process = [node.parent for node in nodes_to_process if node.parent]
-
         return out_tree
 
             
