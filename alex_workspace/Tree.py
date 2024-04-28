@@ -241,6 +241,8 @@ class Custom_Tree:
                                 name += node.name + "+"
                             if name[-1] == "+":
                                 name = name[:-1]
+                            if name.__contains__("root"):
+                                name = name.replace("root+","")
                             parent = first_option[2]
                             # check if parent has a parent
                             new_node = Custom_tree_node(name)
@@ -265,9 +267,13 @@ class Custom_Tree:
                             print("merged not with parent",name)
                             next_leafs.append(item.parent)
                     else:
-                        item.parent.children = []
-                        next_leafs.append(item.parent)
-                        print("no options found")
+                        if item.parent.name != "root":
+                            item.parent.children = []
+                            next_leafs.append(item.parent)
+                            print("no options found")
+                        else:
+                            print("no options found and root")
+                            #next_leafs = []
                     options = []
                 else:
                     print("no parent found")
@@ -559,7 +565,8 @@ class Custom_Tree:
             for key in hash_map:
                 #print("key",key)
                 for node in hash_map[key]:
-                    print(node.name)
+                    #print(node.name)
+                    pass
             for key in hash_map:
                 if key != 0 and len(hash_map[key]) > 1:
                     name = ""
@@ -875,8 +882,6 @@ class Custom_Tree:
             if len(most_connected_nodes) > 1:
                 if last_node is None :
                     last_node = self.add_node(0,"root")
-
-                # print type of problem solver
                 problem_solver(self,current_graph,most_connected_nodes, last_node)
             else:
                 
