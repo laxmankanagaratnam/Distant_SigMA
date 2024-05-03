@@ -350,6 +350,8 @@ class PlotHandler:
                 upgraded_list.append(-1)
         upgraded_list = np.array(upgraded_list, dtype=float)
         return upgraded_list
+    
+    # one with n nodes
         
     def compare_two_clusters(self,list1,list2):
         """
@@ -610,8 +612,23 @@ class PlotHandler:
                 self.plot_tree_recursive(tree.root,True)
                 
 
-            
-            
+    def plot_tree_without_complete(self, tree_list):
+        """
+        Initiates plotting for a list of trees, beginning from the root.
+
+        Args:
+            tree_list (list): A list of trees to be plotted.
+        """
+        """ Plot all trees in the list. """
+        for tree in tree_list:
+            if tree.root.name == "root":
+                for child_node in tree.root.children:
+                    if child_node.children:
+                        self.plot_tree_recursive(child_node,True)
+                    
+            else:
+                if tree.root.children:
+                    self.plot_tree_recursive(tree.root,True)
             
 
     def plot_tree_recursive(self, node,top = False):

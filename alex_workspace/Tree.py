@@ -202,84 +202,96 @@ class Custom_Tree:
         return all_combs
     
     def merge(self):
+        """
+        Merges nodes in a custom tree structure (assumed to be an instance of Custom_Tree).
+        The process identifies similar nodes and combines them, aiming to optimize
+        a tree-like representation.
+        """
+
         leafs = self.get_leaf_nodes()
-        print("leafs start:",leafs)
-        while(leafs):
+        print("leafs start:", leafs)
+
+        while leafs:
             leafs = Custom_Tree.leave_one_node_per_parent_in_list(leafs)
-            print("leafs after leave one node per parent:",leafs)
+            print("leafs after leave one node per parent:", leafs)
+
             next_leafs = []
             options = []
+
             for item in leafs:
                 if item.parent:
+                    # Calculate similarity to current parent
                     base_similarity = Custom_Tree.similarity_for_n_lists([item.parent])
-                    print("base_similarity",base_similarity)
-                    combinations = Custom_Tree.all_combinations(item.parent.children)
+                    print("base_similarity", base_similarity)
+
+                    # Generate combinations of the parent's children
+                    combinations = Custom_Tree.all_combinations(item.parent.children)  
+
                     for comb in combinations:
-                        print("comb",comb)
-                        # calculate similarity between each combination
-                        similarity = Custom_Tree.similarity_for_n_lists(list(comb))
-                        comb_with_parent = [item.parent] + list(comb)
+                        print("comb", comb)
+
+                        # Calculate similarity within the combination
+                        similarity = Custom_Tree.similarity_for_n_lists(list(comb)) 
+
+                        # Calculate similarity of the combination and parent together
+                        comb_with_parent = [item.parent] + list(comb) 
                         similarity_to_parent = Custom_Tree.similarity_for_n_lists(comb_with_parent)
-                        print("step similarity",similarity,similarity_to_parent)
+
+                        print("step similarity", similarity, similarity_to_parent)
+
+                        # Store potential merge options, prioritizing high similarity
                         if similarity_to_parent > base_similarity:
-                            options.append([comb,similarity_to_parent,item.parent,False])
+                            options.append([comb, similarity_to_parent, item.parent, False])  # Merge with parent
                         if similarity > base_similarity:
-                            options.append([comb,similarity,item.parent,True])
-                    
-                    if len(options) > 0:
-                        print("options",options)
-                        # sort options by similarity put highest first
-                        options = sorted(options,key=lambda x: x[1],reverse=True)
-                        # get first option
+                            options.append([comb, similarity, item.parent, True])  # Merge without parent
+
+                    if options:
+                        print("options", options)
+
+                        # Prioritize options based on highest similarity
+                        options = sorted(options, key=lambda x: x[1], reverse=True)
+
+                        # Get the best merge option
                         first_option = options[0]
+
                         if first_option[3]:
-                            # merge with parent
-                            name = ""
-                            for node in first_option[0]:
-                                if isinstance(node.name,np.int64):
-                                    name += str(node.name) + "+"
-                                name += node.name + "+"
-                            if name[-1] == "+":
-                                name = name[:-1]
-                            if name.__contains__("root"):
-                                name = name.replace("root+","")
+                            # Merge with parent
+                            name = "".join(str(node.name) + "+" if isinstance(node.name, np.int64) 
+                                        else node.name + "+" for node in first_option[0])[:-1]
+                            name = name.replace("root+", "")  # Handle potential "root" prefix
                             parent = first_option[2]
-                            # check if parent has a parent
+
+                            # Create new node, add to grandparent if possible
                             new_node = Custom_tree_node(name)
                             if parent.parent:
-                                parent.parent.children.append(Custom_tree_node(name))
-                            next_leafs.append(item.parent)
-                            print("merged with parent",name)
-                            
+                                parent.parent.children.append(new_node)
+                            next_leafs.append(item.parent)  # Mark for later processing
+                            print("merged with parent", name)
+
                         else:
-                            #merge not with parent
-                            name = ""
-                            for node in first_option[0]:
-                                if isinstance(node.name,np.int64):
-                                    name += str(node.name) + "+"
-                                name += node.name + "+"
-                            # check last character is + 
-                            if name[-1] == "+":
-                                name = name[:-1]
-                            new_node = Custom_tree_node(name)
+                            # Merge without parent
+                            name = "".join(str(node.name) + "+" if isinstance(node.name, np.int64) 
+                                        else node.name + "+" for node in first_option[0])[:-1] 
                             parent = first_option[2]
-                            parent.children = [new_node]
-                            print("merged not with parent",name)
+                            parent.children = [Custom_tree_node(name)]
                             next_leafs.append(item.parent)
+                            print("merged not with parent", name)
+
                     else:
-                        if item.parent.name != "root":
-                            item.parent.children = []
+                        # No suitable merge options
+                        if item.parent.name != "root":  
+                            item.parent.children = []  # Remove children
                             next_leafs.append(item.parent)
                             print("no options found")
                         else:
                             print("no options found and root")
-                            #next_leafs = []
-                    options = []
+
                 else:
+                    # Handle leaf nodes without a parent
                     print("no parent found")
-                    # if no parent is available
-                    pass
-            leafs = next_leafs         
+
+            leafs = next_leafs  # Prepare for the next iteration
+        
 
             
     
@@ -673,9 +685,9 @@ class Custom_Tree:
             string += str(most_connected_node) + "+"
         if string[:-1] in self.combined_history:
             return
-        search_depth = 25 - self.get_depth()
+        search_depth = 30 - self.get_depth()
         if search_depth < 1:
-            search_depth = 2
+            search_depth = 3
         #print("most connected nodes",most_connected_nodes)
         for most_connected_node in most_connected_nodes:
             #print("looking at", most_connected_node)
