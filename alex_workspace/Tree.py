@@ -21,7 +21,14 @@ class Custom_tree_node:
         self.children = []
         self.parent = None
         self.visited = False
-
+    def get_depth(self):
+        """Returns the depth of the node in the tree."""
+        depth = 0
+        current = self
+        while current.parent:
+            depth += 1
+            current = current.parent
+        return depth
     def add_child(self, child):
         """Add a child node to this node."""
         child.parent = self
@@ -200,8 +207,128 @@ class Custom_Tree:
             for comb in combs:
                 all_combs.append(comb)
         return all_combs
-    
+
+    def find_one_leaf_per_parent(self):
+        working_stack = []
+        if self.root.name == "root":
+            for child in self.root.children:
+                working_stack.append(child)
+        else:
+            working_stack = [self.root]
+        final_nodes = []
+        while(working_stack):
+            current_node = working_stack.pop()
+            if not current_node.children:
+                final_nodes.append(current_node)
+            else:
+                working_stack.extend(current_node.children)
+
+        return final_nodes
+    @staticmethod
+    def comparison_two_clusters_true_false(cluster1, cluster2):
+        # return true or false
+        #return True
+        return np.random.choice([True, False])
+
     def merge(self):
+        working_stack = self.find_one_leaf_per_parent()
+        while(working_stack):
+            next_iteration_items = []
+            for item in working_stack: # looking at same level here
+                if item.parent:
+                    siblings = item.parent.children
+                    #create networkx graph between all siblings
+                    graph = nx.Graph()
+                    for sibling in siblings:
+                        graph.add_node(sibling)
+                    for sibling in siblings:
+                        for sibling2 in siblings:
+                            if sibling != sibling2:
+                                if self.comparison_two_clusters_true_false(sibling,sibling2):
+                                    graph.add_edge(sibling,sibling2)
+                    # check if graph is connected
+                    if len(graph.nodes) == 0:
+                        continue
+                    if nx.is_connected(graph):
+                        # merge all children and parent together
+                        name = ""
+                        for sibling in siblings:
+                            parts = sibling.get_all_parts_with_children_recurive()
+                            for part in parts:
+                                name += str(part) + "+"
+                        if name.__contains__("+root"):
+                            name = name.replace("+root","")
+                        if name.__contains__("root+"):
+                            name = name.replace("root+","")  
+                        #check if last letter is + 
+                        if name[-1] == "+":
+                            name = name[:-1]
+                        item.parent.name = name
+                        item.parent.children = []
+                        next_iteration_items.append(item.parent)
+            working_stack = next_iteration_items
+
+
+    def merge_with_levels(self):
+        starting_leafs = self.find_one_leaf_per_parent()
+        working_stack = []
+        level_list = []
+        for leaf in starting_leafs:
+            level_list.append((leaf, leaf.get_depth()))  # Append the leaf and its depth as a tuple
+        max_depth = max(level_list, key=lambda x: x[1])[1]
+        # add all items with max depth to working stack
+        for item in level_list:
+            if item[1] == max_depth:
+                working_stack.append(item[0])
+
+        while(working_stack):
+            next_iteration_items = []
+            if max_depth != 0:
+                max_depth -= 1
+            for item in level_list:
+                if item[1] == max_depth:
+                    working_stack.append(item[0])
+            for item in working_stack: # looking at same level here
+
+                if item.parent:
+                    siblings = item.parent.children
+                    #create networkx graph between all siblings
+                    graph = nx.Graph()
+                    for sibling in siblings:
+                        graph.add_node(sibling)
+                    for sibling in siblings:
+                        for sibling2 in siblings:
+                            if sibling != sibling2:
+                                if self.comparison_two_clusters_true_false(sibling,sibling2):
+                                    graph.add_edge(sibling,sibling2)
+                    # check if graph is connected
+                    if len(graph.nodes) == 0:
+                        continue
+                    if nx.is_connected(graph):
+                        # merge all children and parent together
+                        name = ""
+                        for sibling in siblings:
+                            parts = sibling.get_all_parts_with_children_recurive()
+                            for part in parts:
+                                name += str(part) + "+"
+                        if name.__contains__("+root"):
+                            name = name.replace("+root","")
+                        if name.__contains__("root+"):
+                            name = name.replace("root+","")
+                        #check if last letter is +
+                        if name[-1] == "+":
+                            name = name[:-1]
+                        item.parent.name = name
+                        item.parent.children = []
+                        next_iteration_items.append(item.parent)
+            working_stack = next_iteration_items
+
+
+
+
+
+
+    def merge_old(self):
         """
         Merges nodes in a custom tree structure (assumed to be an instance of Custom_Tree).
         The process identifies similar nodes and combines them, aiming to optimize
