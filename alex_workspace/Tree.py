@@ -34,6 +34,13 @@ class Custom_tree_node:
         child.parent = self
         self.children.append(child)
         return child 
+    
+    def add_unique_childD(self,child):
+        """Add a child node to this node if it is not already a child."""
+        if child.name not in [c.name for c in self.children]:
+            child.parent = self
+            self.children.append(child)
+            return child
 
     def get_all_parts(self):
         """Splits the node's name by '+' and returns each part as a list."""
@@ -223,12 +230,18 @@ class Custom_Tree:
             else:
                 working_stack.extend(current_node.children)
 
+        for item in final_nodes:
+            if item.parent:
+                for item2 in final_nodes:
+                    if item2.parent:
+                        if item.parent == item2.parent and item != item2:
+                            final_nodes.remove(item2)
         return final_nodes
     @staticmethod
     def comparison_two_clusters_true_false(cluster1, cluster2):
         # return true or false
-        #return True
-        return np.random.choice([True, False])
+        return False
+        #return np.random.choice([True, False])
 
     def merge(self):
         working_stack = self.find_one_leaf_per_parent()
@@ -289,7 +302,6 @@ class Custom_Tree:
                 if item[1] == max_depth:
                     working_stack.append(item[0])
             for item in working_stack: # looking at same level here
-
                 if item.parent:
                     siblings = item.parent.children
                     #create networkx graph between all siblings
@@ -299,7 +311,9 @@ class Custom_Tree:
                     for sibling in siblings:
                         for sibling2 in siblings:
                             if sibling != sibling2:
+                                # use all parts in the comparison of the cluster so also the children of the points
                                 if self.comparison_two_clusters_true_false(sibling,sibling2):
+                                    
                                     graph.add_edge(sibling,sibling2)
                     # check if graph is connected
                     if len(graph.nodes) == 0:
@@ -321,9 +335,123 @@ class Custom_Tree:
                         item.parent.name = name
                         item.parent.children = []
                         next_iteration_items.append(item.parent)
+                    else:
+                        #TODO merge connected parts together and leave as a solution 
+                        pass
             working_stack = next_iteration_items
 
+    def merge_new_version(self):
+        starting_leafs = self.find_one_leaf_per_parent()
+        if not starting_leafs:
+            print("No leafs found")
+            return
 
+        working_stack = []
+        level_list = []
+        for leaf in starting_leafs:
+            level_list.append((leaf, leaf.get_depth()))  # Append the leaf and its depth as a tuple
+        
+        max_depth = max(level_list, key=lambda x: x[1])[1]
+        
+        # Add all items with max depth to working stack
+        for item in level_list:
+            if item[1] == max_depth:
+                working_stack.append(item[0])
+                
+        merch_log = {}
+
+        while working_stack:
+            print("working stack size", len(working_stack))
+            next_iteration_items = []
+            if max_depth != 0:
+                max_depth -= 1
+            for item in level_list:
+                if item[1] == max_depth:
+                    working_stack.append(item[0])
+            
+            for item in working_stack:  # Looking at the same level here
+                if item.parent:
+                    print("current item", item.name, "parent", item.parent.name)
+                    siblings = item.parent.children
+                    # Create networkx graph between all siblings
+                    graph = nx.Graph()
+                    sibling_set = set(siblings)  # Use a set to ensure each sibling is added only once
+                    
+                    for sibling in sibling_set:
+                        graph.add_node(sibling)
+                    
+                    for sibling in sibling_set:
+                        for sibling2 in sibling_set:
+                            if sibling != sibling2:
+                                # Use all parts in the comparison of the cluster so also the children of the points
+                                if self.comparison_two_clusters_true_false(sibling, sibling2):
+                                    if merch_log.get(sibling.uuid) and sibling2.uuid in merch_log[sibling.uuid]:
+                                        continue
+                                    if merch_log.get(sibling2.uuid) and sibling.uuid in merch_log[sibling2.uuid]:
+                                        continue
+                                    graph.add_edge(sibling, sibling2)
+                    
+                    # Check if the graph is connected
+                    if len(graph.nodes) == 0:
+                        continue
+                    if nx.is_connected(graph):
+                        print("connected")
+                        print("parent name", item.parent.name)
+                        if item.parent.name != "root":
+                            item.parent.children = []
+                            next_iteration_items.append(item.parent)
+                        else:
+                            pass
+
+
+                    else:
+                        merches = []
+                        print("not connected")
+                        # Iterate all components
+                        for component in nx.connected_components(graph):
+                            print("component", component)
+                            # Create new node
+                            name = ""
+                            for node in component:
+                                parts = node.name.split("+")
+                                for part in parts:
+                                    name += str(part) + "+"
+                            if name.__contains__("+root"):
+                                name = name.replace("+root", "")
+                            if name.__contains__("root+"):
+                                name = name.replace("root+", "")
+                            # Check if last letter is +
+                            if name[-1] == "+":
+                                name = name[:-1]
+                            new_node = Custom_tree_node(name)
+                            print("new node", new_node.name)
+                            # Check if parent has parent
+                            try:
+                                item.parent.parent.add_unique_childD(new_node)
+                                print("added to parent partent",item.parent.parent.name) 
+                            except:
+                                item.parent.add_unique_childD(new_node)
+                                print("added to parent")
+                                pass 
+                            try:
+                                item.parent.children = []
+                                print("removed item", item.name)
+                                print(item.parent.children)
+                            except:
+                                print("error with parent remove item", item.name , "parent", item.parent.name)
+                            merches.append(new_node.uuid)
+                        for merch in merches:
+                            for merch_sub in merches:
+                                if merch != merch_sub:
+                                    if merch_log.get(merch):
+                                        merch_log[merch].append(merch_sub)
+                                    else:
+                                        merch_log[merch] = [merch_sub]
+
+
+                                    
+            working_stack = next_iteration_items
+        print("merchant log", merch_log)
 
 
 

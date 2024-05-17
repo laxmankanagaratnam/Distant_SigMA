@@ -8,6 +8,50 @@ from Tree import Custom_Tree
 from Tree import Custom_tree_node
 
 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def plot_2d_comparison(labels, df, filename, output_pathname=None):
+    """
+    Plots a 2D comparison matrix for all axes in the DataFrame. Data points are colored according to clustering labels.
+    
+    :param labels: A NumPy array containing cluster labels.
+    :param df: A pandas DataFrame containing the data to plot.
+    :param filename: The filename to save the plot.
+    :param output_pathname: Optional; the directory path to save the file. If None, shows plot instead.
+    """
+    # Filter out noise points (labelled as -1) and create a new DataFrame that includes the labels
+    valid_indices = labels != -1
+    df_plot = df.loc[valid_indices].copy()
+    df_plot['Cluster_Label'] = labels[valid_indices]
+    
+    # Set up the color palette for plotting
+    unique_labels = np.unique(labels[valid_indices])
+    palette = sns.color_palette("hsv", len(unique_labels))
+    
+    # Create a pairplot
+    grid = sns.pairplot(df_plot, hue='Cluster_Label', palette=palette, plot_kws={'alpha': 0.6})
+    
+    # Set plot title
+    plt.suptitle('2D Comparison of All Axes', size=20, y=1.02)
+    
+    # Save or show the plot
+    if output_pathname:
+        plt.savefig(f"{output_pathname}/{filename}.png")
+    else:
+        plt.show()
+
+    # Close the plot explicitly
+    plt.close()
+
+# Example usage:
+# Assuming you have `data_labels` as your cluster labels and `data_frame` as your DataFrame
+# plot_2d_comparison(data_labels, data_frame, 'comparison_plot')
+
+
+
 def plot3D(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: str = None, hrd: bool = False,
          icrs: bool = False, return_fig: bool = False):
     """ Simple function for creating a result plot of all the final clusters. HRD option available."""
@@ -697,4 +741,15 @@ class PlotHandler:
         """
         # Plot the clusters
         fig = plot2D(labels, self.df_region, title, self.output_path, hrd= True, return_fig=True)
+        fig.show()
+    def plot_labels_2D_alternative(self,labels, title = ""):
+        """
+        Plots the labels in a 2D space.
+
+        Args:
+            labels (numpy.ndarray): Labels to plot.
+            title (str): Title for the plot.
+        """
+        # Plot the clusters
+        fig = plot_2d_comparison(labels, self.df_region, title, self.output_path)
         fig.show()
