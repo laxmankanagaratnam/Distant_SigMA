@@ -8,10 +8,6 @@ import os
 import random
 
 
-sys.path.append(os.path.abspath(r"\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications"))
-sys.path.append(os.path.abspath(r"\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace"))
-
-
 from ConcensusClustering.consensus import ClusterConsensus
 import pandas as pd
 
