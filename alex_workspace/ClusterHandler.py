@@ -1,5 +1,7 @@
 import networkx as nx
 from Tree import Custom_Tree
+import numpy as np
+from collections import defaultdict, Counter
 
 class ClusteringHandler:
     """
@@ -80,3 +82,56 @@ class ClusteringHandler:
             tree.print_tree()
             print("---")  # Separator for readability
         return trees
+    
+    def tree_as_cluster_list(self,trees,tmp):
+        output_nodes = []
+        cluster_label_list = []
+        # if trees not list
+        if not isinstance(trees, list):
+            trees = [trees]
+        if len(trees) == 0:
+            return []
+        for tree in trees:
+            output_nodes.extend(tree.get_leaf_nodes())
+        for node in output_nodes:   
+            cluster_label_list.append(self.count_label_node(node,tmp))
+        final_list = []
+        for index in range(len(cluster_label_list[0])):
+            # get maximum value of all lists at index
+            max_value = max([cluster_label_list[i][index] for i in range(len(cluster_label_list))])
+            if max_value == 0:
+                final_list.append(-1)
+                continue
+            # also provide the i of the list with the maximum value
+            max_index = [i for i in range(len(cluster_label_list)) if cluster_label_list[i][index] == max_value]
+            # only insert the index of the first list with the maximum value
+            final_list.append(max_index[0])
+            print("added to final list")
+        return final_list
+            
+
+                
+                
+    def count_label_node(self,node,tmp):
+        """
+        Extracts and processes label data for a single node based on the temporary data list.
+
+        Args:
+            node (Custom_tree_node): A node from which labels are extracted.
+
+        Returns:
+            numpy.ndarray: An array of label data processed from the node.
+        """
+        if node.name == "root":
+            return np.array([])
+        local_lists = []  # Store lists for each sub-node
+        for sub_node in node.name.split("+"):
+            local_lists.append(tmp[int(sub_node)])
+
+        # Transpose to work with columns (indices)
+        transposed_lists = np.array(local_lists).T 
+
+        # Count '1' occurrences in each column
+        occurrence_counts = np.sum(transposed_lists == True, axis=1)
+
+        return occurrence_counts

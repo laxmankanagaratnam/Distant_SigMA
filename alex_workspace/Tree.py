@@ -240,8 +240,8 @@ class Custom_Tree:
     @staticmethod
     def comparison_two_clusters_true_false(cluster1, cluster2):
         # return true or false
-        return False
-        #return np.random.choice([True, False])
+        #return False
+        return np.random.choice([True, False], p=[0.2, 0.8])
 
 
 
@@ -358,8 +358,9 @@ class Custom_Tree:
             working_stack = next_iteration_items
         print("merchant log", merch_log)
 
+
     
-    
+
     def add_node(self, parent_uuid, child_name):
         """
         Adds a new node with the given child name as a child of the node with the specified parent UUID.

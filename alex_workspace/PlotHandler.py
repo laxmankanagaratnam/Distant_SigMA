@@ -258,23 +258,6 @@ def plot2D(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: s
                     showlegend=True, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)', legendgroup=f'group-{uid}', )
                 fig.add_trace(trace_yz, row=1, col=3)  # add cluster trace
 
-        # --------------- 2D vel plot -------------------
-
-        # background
-        trace_vel_bg = go.Scatter(
-            x=df_plot.loc[cut_us, vel1], y=df_plot.loc[cut_us, vel2],
-            mode='markers', marker=dict(size=3, color=bg_color, opacity=bg_opacity), hoverinfo='none', showlegend=False)
-        fig.add_trace(trace_vel_bg, row=1, col=2)
-
-        # cluster velocities (same as for 3D positions)
-        for j, uid in enumerate(np.unique(clustering_solution)):
-            if uid != -1:
-                plot_points = (clustering_solution == uid)  # & cut_us
-                trace_vel = go.Scatter(x=df_plot.loc[plot_points, vel1], y=df_plot.loc[plot_points, vel2],
-                                    mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)], ),
-                                    hoverinfo='none', legendgroup=f'group-{uid}',
-                                    name=f'Cluster {uid} ({np.sum(plot_points)} stars)', showlegend=False)
-                fig.add_trace(trace_vel, row=1, col=2)
 
 
         # Finalize layout
