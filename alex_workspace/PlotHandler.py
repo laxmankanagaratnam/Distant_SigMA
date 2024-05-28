@@ -4,8 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-from Tree import Custom_Tree
-from Tree import Custom_tree_node
+
 
 
 import numpy as np
@@ -318,7 +317,12 @@ class PlotHandler:
 
         self.prefix = 'cluster_label_group'
         self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
-    
+    def true_list_node(self,node):
+        local_list = []
+        for sub_node in node.name.split("+"):
+            local_list.append(self.tmp[int(sub_node)])
+        merged_list = [any(item) for item in zip(*local_list)]
+        return np.array(merged_list)
     def labels_single_node(self,node):
         """
         Extracts and processes label data for a single node based on the temporary data list.

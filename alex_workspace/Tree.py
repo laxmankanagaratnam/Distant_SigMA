@@ -4,6 +4,14 @@ import networkx as nx
 import uuid
 import numpy as np
 from itertools import combinations
+import os
+import sys
+
+
+sys.path.append(os.path.abspath(
+    r"\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\Git\SigMA_Alex_modifications\alex_workspace"))
+from EstimateClass import EstimatorClass
+from PlotHandler import PlotHandler
 
 class Custom_tree_node:
     """Defines a node for use in a custom tree structure.
@@ -145,7 +153,7 @@ class Custom_Tree:
 
         
     
-    def get_leaf_nodes(self) -> list[Custom_tree_node]:
+    def get_leaf_nodes(self):
         """
         This function returns a list of leaf nodes in the tree.
 
@@ -173,9 +181,7 @@ class Custom_Tree:
                 stack.extend(node.children)
 
         return leaf_nodes
-    def similarity_for_n_lists(lists):
-        # return single random value between 0 and 1
-        return np.random.rand()
+
     def leave_one_node_per_parent_in_list(node_list):
         """
         Ensures that only one node per parent is left in the provided list of tree nodes.
@@ -237,15 +243,19 @@ class Custom_Tree:
                         if item.parent == item2.parent and item != item2:
                             final_nodes.remove(item2)
         return final_nodes
+    
     @staticmethod
-    def comparison_two_clusters_true_false(cluster1, cluster2):
-        # return true or false
-        #return False
-        return np.random.choice([True, False], p=[0.2, 0.8])
+    def comparison_two_clusters_true_false(cluster1, cluster2,plotter):
+        #mapCluster1 = plotter.true_list_node(cluster1)
+        #mapCluster2 = plotter.true_list_node(cluster2)
+        #estimator = EstimatorClass()
+        #result = estimator.estimate_maha_distance(mapCluster1, mapCluster2)
+        #print("similarity result is", result)
+        #return result < 1.5
+        return False
 
 
-
-    def merge(self):
+    def merge(self,plotter):
         starting_leafs = self.find_one_leaf_per_parent()
         if not starting_leafs:
             print("No leafs found")
@@ -289,7 +299,7 @@ class Custom_Tree:
                         for sibling2 in sibling_set:
                             if sibling != sibling2:
                                 # Use all parts in the comparison of the cluster so also the children of the points
-                                if self.comparison_two_clusters_true_false(sibling, sibling2):
+                                if self.comparison_two_clusters_true_false(sibling, sibling2,plotter):
                                     if merch_log.get(sibling.uuid) and sibling2.uuid in merch_log[sibling.uuid]:
                                         continue
                                     if merch_log.get(sibling2.uuid) and sibling.uuid in merch_log[sibling2.uuid]:
@@ -333,17 +343,14 @@ class Custom_Tree:
                             # Check if parent has parent
                             try:
                                 item.parent.parent.add_unique_childD(new_node)
-                                print("added to parent partent",item.parent.parent.name) 
                             except:
                                 item.parent.add_unique_childD(new_node)
-                                print("added to parent")
                                 pass 
                             try:
                                 item.parent.children = []
-                                print("removed item", item.name)
                                 print(item.parent.children)
                             except:
-                                print("error with parent remove item", item.name , "parent", item.parent.name)
+                                pass
                             merches.append(new_node.uuid)
                         for merch in merches:
                             for merch_sub in merches:
@@ -356,7 +363,6 @@ class Custom_Tree:
 
                                     
             working_stack = next_iteration_items
-        print("merchant log", merch_log)
 
 
     

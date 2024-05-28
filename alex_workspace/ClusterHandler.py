@@ -105,9 +105,14 @@ class ClusteringHandler:
             # also provide the i of the list with the maximum value
             max_index = [i for i in range(len(cluster_label_list)) if cluster_label_list[i][index] == max_value]
             # only insert the index of the first list with the maximum value
+            # convert the index from 1 to 1.0 for example, float
             final_list.append(max_index[0])
-            print("added to final list")
-        return final_list
+        return np.array(final_list)
+
+    def full_pipline_tree_hierachy(self,graph,solver,tmp):
+        trees = self.do_all(graph, solver)
+        labels = self.tree_as_cluster_list(trees,tmp)
+        return labels
             
 
                 
