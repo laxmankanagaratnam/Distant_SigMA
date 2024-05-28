@@ -8,8 +8,19 @@ import os
 import sys
 
 
-sys.path.append(os.path.abspath(
-    r"\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\Git\SigMA_Alex_modifications\alex_workspace"))
+# Get the directory of the current script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Define relative paths to your module directories
+relative_paths = [
+    os.path.join(script_dir, "SigMA_Alex_modifications"),
+    os.path.join(script_dir, "SigMA_Alex_modifications", "alex_workspace")
+]
+
+# Append the relative paths to sys.path
+for path in relative_paths:
+    if path not in sys.path:
+        sys.path.append(path)
 from EstimateClass import EstimatorClass
 from PlotHandler import PlotHandler
 
