@@ -252,7 +252,7 @@ class Custom_Tree:
         return result < threshold, result
 
 
-    def merge(self,plotter,threshold, mode = 0):
+    def merge(self,plotter,threshold, mode = 1):
         starting_leafs = self.find_one_leaf_per_parent()
         if not starting_leafs:
             print("No leafs found")
@@ -311,29 +311,50 @@ class Custom_Tree:
                         if mode == 0:
                             if item.parent.name != "root":
                                 item.parent.children = []
+                                # add all nodes to the parent
+                                name = item.parent.name
+                                for node in graph.nodes:
+                                    name += "+" + node.name
+                                item.parent.name = name
                                 next_iteration_items.append(item.parent)
                             else:
                                 pass
                         # merge only best component from splits from before
                         else:
-                            # check if any nodes are in the merch_log and add them to list
-                            merch_nodes = []
-                            for node in graph.nodes:
-                                if merch_log.get(node.uuid):
-                                    total_weight_connected = 0
-                                    # check graph for all connected nodes to the current node and sum the weights
-                                    for connected_node in nx.node_connected_component(graph, node):
-                                        total_weight_connected += graph[node][connected_node]['weight']
-                                    # add node and weight to list
-                                    merch_nodes.append((node, total_weight_connected))
-                            # sort the list by weight
-                            merch_nodes = sorted(merch_nodes, key=lambda x: x[1], reverse=True)
-                            # add the best node to the parent and all other nodes that are not in merch_nodes
-                            for node in graph.nodes:
-                                # if not merch_nodes
-                                if node not in [x[0] for x in merch_nodes]:
-                                    pass
-                                    # TODO bin nicht ganz sicher ob das eig sinn macht
+                            if item.parent.name == "root":
+                                pass
+                            else:
+                                # check if any nodes are in the merch_log and add them to list
+                                merch_nodes = []
+                                for node in graph.nodes:
+                                    if merch_log.get(node.uuid):
+                                        total_weight_connected = 0
+                                        # check graph for all connected nodes to the current node and sum the weights
+                                        for connected_node in nx.node_connected_component(graph, node):
+                                            total_weight_connected += graph[node][connected_node]['weight']
+                                        # add node and weight to list
+                                        merch_nodes.append((node, total_weight_connected))
+
+                                if len(merch_nodes) == 0:
+                                    item.parent.children = []
+                                    # add all nodes to the parent
+                                    name = item.parent.name
+                                    for node in graph.nodes:
+                                        name += "+" + node.name
+                                    item.parent.name = name
+                                    next_iteration_items.append(item.parent)
+                                    continue
+                                # sort the list by weight
+                                merch_nodes = sorted(merch_nodes, key=lambda x: x[1], reverse=True)
+                                # add the best node to the parent and all other nodes that are not in merch_nodes
+                                name = item.parent.name
+                                name += "+" + merch_nodes[0][0].name
+                                for node in graph.nodes:
+                                    # if not merch_nodes
+                                    if node not in [x[0] for x in merch_nodes]:
+                                        name += "+" + node.name
+                                item.parent.name = name
+                                next_iteration_items.append(item.parent)
 
 
 
