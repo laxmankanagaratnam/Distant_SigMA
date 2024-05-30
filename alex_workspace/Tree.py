@@ -247,7 +247,7 @@ class Custom_Tree:
     def comparison_two_clusters_true_false(cluster1, cluster2,plotter,threshold):
         mapCluster1 = plotter.true_list_node(cluster1)
         mapCluster2 = plotter.true_list_node(cluster2)
-        estimator = EstimatorClass()
+        estimator = EstimatorClass(plotter.df_region)
         result = estimator.estimate_maha_distance(mapCluster1, mapCluster2)
         return result < threshold, result
 
@@ -302,7 +302,7 @@ class Custom_Tree:
                                         continue
                                     if merch_log.get(sibling2.uuid) and sibling.uuid in merch_log[sibling2.uuid]:
                                         continue
-                                    graph[sibling][sibling2]['weight'] = result
+                                    graph.add_edge(sibling, sibling2, weight=result)
                     
                     # Check if the graph is connected
                     if len(graph.nodes) == 0:
