@@ -7,29 +7,17 @@ import pandas as pd
 from scipy.spatial import distance
 from itertools import combinations
 
-# Get the directory of the current script
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Define relative paths to your module directories
-relative_paths = [
-    os.path.join(script_dir, "SigMA_Alex_modifications"),
-    os.path.join(script_dir, "SigMA_Alex_modifications", "alex_workspace")
-]
-
-# Append the relative paths to sys.path
-for path in relative_paths:
-    if path not in sys.path:
-        sys.path.append(path)
 from NoiseRemoval.BulkVelocityClassic import ClassicBV
 from miscellaneous.covariance_trafo_sky2gal import transform_covariance_shper2gal
 
 
 class EstimatorClass:
-    def __init__(self, file_path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\Git\SigMA_Alex_modifications\alex_workspace\3D_plotting\3D_plotting\Region_dataframes\Region_0.0_sf_200_grouped_solutions.csv'
-):
-        self.file_path = file_path
-        self.data = self._load_data()
+    """Class to estimate the Mahalanobis distance between two clusters of data."""
+    def __init__(self,data):
+        self.data = data
         self.cbve = ClassicBV(self.data)
+        self.file_path = ""
 
     def _load_data(self):
         """Load and preprocess the data from the CSV file."""

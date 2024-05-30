@@ -109,8 +109,10 @@ class ClusteringHandler:
             final_list.append(max_index[0])
         return np.array(final_list)
 
-    def full_pipline_tree_hierachy(self,graph,solver,tmp):
+    def full_pipline_tree_hierachy(self,graph,solver,tmp,plotter,threshold,merge_option = 0):
         trees = self.do_all(graph, solver)
+        for tree in trees:
+            tree.merge(plotter,threshold,merge_option)
         labels = self.tree_as_cluster_list(trees,tmp)
         return labels
             

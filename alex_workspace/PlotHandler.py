@@ -212,52 +212,66 @@ def plot2D(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: s
 
 
         # --------------- 2D scatter plots -------------------
+        legend_clusters = set()
         # X vs Y
         trace_xy_bg = go.Scatter(
             x=df_plot.loc[cut_us, 'X'], y=df_plot.loc[cut_us, 'Y'],
-            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity), hoverinfo='none', showlegend=False)
+            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity),
+            hoverinfo='none', showlegend=False)
         fig.add_trace(trace_xy_bg, row=1, col=1)
 
         for j, uid in enumerate(np.unique(clustering_solution)):  # for each cluster label in the label array
             if uid != -1:
                 plot_points = (clustering_solution == uid)  # grab the right locations
+                show_legend = uid not in legend_clusters  # Show legend only if the cluster is not yet added
                 trace_xy = go.Scatter(
                     x=df_plot.loc[plot_points, 'X'], y=df_plot.loc[plot_points, 'Y'],
                     mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)]), hoverinfo='none',
-                    showlegend=True, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)', legendgroup=f'group-{uid}', )
+                    showlegend=show_legend, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)',
+                    legendgroup=f'group-{uid}', )
                 fig.add_trace(trace_xy, row=1, col=1)  # add cluster trace
+                if show_legend:
+                    legend_clusters.add(uid)
 
         # X vs Z
         trace_xz_bg = go.Scatter(
             x=df_plot.loc[cut_us, 'X'], y=df_plot.loc[cut_us, 'Z'],
-            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity), hoverinfo='none', showlegend=False)
+            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity),
+            hoverinfo='none', showlegend=False)
         fig.add_trace(trace_xz_bg, row=1, col=2)
 
         for j, uid in enumerate(np.unique(clustering_solution)):  # for each cluster label in the label array
             if uid != -1:
                 plot_points = (clustering_solution == uid)  # grab the right locations
+                show_legend = uid not in legend_clusters  # Show legend only if the cluster is not yet added
                 trace_xz = go.Scatter(
                     x=df_plot.loc[plot_points, 'X'], y=df_plot.loc[plot_points, 'Z'],
                     mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)]), hoverinfo='none',
-                    showlegend=True, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)', legendgroup=f'group-{uid}', )
+                    showlegend=show_legend, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)',
+                    legendgroup=f'group-{uid}', )
                 fig.add_trace(trace_xz, row=1, col=2)  # add cluster trace
+                if show_legend:
+                    legend_clusters.add(uid)
 
         # Y vs Z
         trace_yz_bg = go.Scatter(
             x=df_plot.loc[cut_us, 'Y'], y=df_plot.loc[cut_us, 'Z'],
-            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity), hoverinfo='none', showlegend=False)
+            mode='markers', marker=dict(size=1, color=bg_color, opacity=bg_opacity),
+            hoverinfo='none', showlegend=False)
         fig.add_trace(trace_yz_bg, row=1, col=3)
 
         for j, uid in enumerate(np.unique(clustering_solution)):  # for each cluster label in the label array
             if uid != -1:
                 plot_points = (clustering_solution == uid)  # grab the right locations
+                show_legend = uid not in legend_clusters  # Show legend only if the cluster is not yet added
                 trace_yz = go.Scatter(
                     x=df_plot.loc[plot_points, 'Y'], y=df_plot.loc[plot_points, 'Z'],
                     mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)]), hoverinfo='none',
-                    showlegend=True, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)', legendgroup=f'group-{uid}', )
+                    showlegend=show_legend, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)',
+                    legendgroup=f'group-{uid}', )
                 fig.add_trace(trace_yz, row=1, col=3)  # add cluster trace
-
-
+                if show_legend:
+                    legend_clusters.add(uid)
 
         # Finalize layout
         fig.update_layout(
@@ -317,6 +331,15 @@ class PlotHandler:
 
         self.prefix = 'cluster_label_group'
         self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
+    def __init__(self,tmp,data_frame,path=""):
+        self.r = 0
+        self.output_path = path
+        self.df_region = data_frame
+        self.data_path = ""
+        self.tmp = tmp
+        self.prefix = 'cluster_label_group'
+        self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
+
     def true_list_node(self,node):
         local_list = []
         for sub_node in node.name.split("+"):

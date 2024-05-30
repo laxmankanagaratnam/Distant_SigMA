@@ -13,7 +13,7 @@ import pandas as pd
 
 
 
-def get_orion_data(num):
+def get_orion_data(num, path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\Grouped_solution_labels\Grouped_solution_labels/'):
     '''
     Load the Orion dataset and return the graph that represents the data.
     
@@ -25,7 +25,7 @@ def get_orion_data(num):
         translation (dict): A dictionary that maps the original node labels to the new node labels.
     '''
     # change to the location of the directory containing the label data
-    label_path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\Grouped_solution_labels\Grouped_solution_labels/'
+
 
     # Orion is split into 5 regions (numbered 0 - 4)
     ## Region 2 is the largest (22 groups)
@@ -37,8 +37,8 @@ def get_orion_data(num):
     r =num
 
     region = regions[r]
-    grouped_labels = pd.read_csv(label_path+region+f'grouped_solutions_chunk_{r}.csv', header=None).to_numpy() # load labels
-    print(f"There are {grouped_labels.shape[0]} grouped solutions for region {r}.")
+    grouped_labels = pd.read_csv(path+region+f'grouped_solutions_chunk_{r}.csv', header=None).to_numpy() # load labels
+
     #density = pd.read_csv(label_path+region+f'Density_chunk_{r}.csv', header=None).to_numpy() # load density (for cc.remove_edges_density)
     #rho =density.reshape(len(density),)
 
