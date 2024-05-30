@@ -1,4 +1,4 @@
-from ConcensusClustering.consensus import ClusterConsensus
+
 
 import networkx as nx
 

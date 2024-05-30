@@ -317,6 +317,15 @@ class PlotHandler:
 
         self.prefix = 'cluster_label_group'
         self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
+    def __init__(self,tmp,data_frame,path=""):
+        self.r = 0
+        self.output_path = path
+        self.df_region = data_frame
+        self.data_path = ""
+        self.tmp = tmp
+        self.prefix = 'cluster_label_group'
+        self.count = sum(1 for col in self.df_region.columns if col.startswith(self.prefix))
+
     def true_list_node(self,node):
         local_list = []
         for sub_node in node.name.split("+"):

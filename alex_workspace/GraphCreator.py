@@ -38,7 +38,7 @@ def get_orion_data(num):
 
     region = regions[r]
     grouped_labels = pd.read_csv(label_path+region+f'grouped_solutions_chunk_{r}.csv', header=None).to_numpy() # load labels
-    print(f"There are {grouped_labels.shape[0]} grouped solutions for region {r}.")
+
     #density = pd.read_csv(label_path+region+f'Density_chunk_{r}.csv', header=None).to_numpy() # load density (for cc.remove_edges_density)
     #rho =density.reshape(len(density),)
 

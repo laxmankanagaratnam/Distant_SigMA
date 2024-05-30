@@ -7,19 +7,7 @@ import pandas as pd
 from scipy.spatial import distance
 from itertools import combinations
 
-# Get the directory of the current script
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Define relative paths to your module directories
-relative_paths = [
-    os.path.join(script_dir, "SigMA_Alex_modifications"),
-    os.path.join(script_dir, "SigMA_Alex_modifications", "alex_workspace")
-]
-
-# Append the relative paths to sys.path
-for path in relative_paths:
-    if path not in sys.path:
-        sys.path.append(path)
 from NoiseRemoval.BulkVelocityClassic import ClassicBV
 from miscellaneous.covariance_trafo_sky2gal import transform_covariance_shper2gal
 

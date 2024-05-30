@@ -8,19 +8,7 @@ import os
 import sys
 
 
-# Get the directory of the current script
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Define relative paths to your module directories
-relative_paths = [
-    os.path.join(script_dir, "SigMA_Alex_modifications"),
-    os.path.join(script_dir, "SigMA_Alex_modifications", "alex_workspace")
-]
-
-# Append the relative paths to sys.path
-for path in relative_paths:
-    if path not in sys.path:
-        sys.path.append(path)
 from EstimateClass import EstimatorClass
 from PlotHandler import PlotHandler
 
@@ -256,17 +244,15 @@ class Custom_Tree:
         return final_nodes
     
     @staticmethod
-    def comparison_two_clusters_true_false(cluster1, cluster2,plotter):
-        #mapCluster1 = plotter.true_list_node(cluster1)
-        #mapCluster2 = plotter.true_list_node(cluster2)
-        #estimator = EstimatorClass()
-        #result = estimator.estimate_maha_distance(mapCluster1, mapCluster2)
-        #print("similarity result is", result)
-        #return result < 1.5
-        return False
+    def comparison_two_clusters_true_false(cluster1, cluster2,plotter,threshold):
+        mapCluster1 = plotter.true_list_node(cluster1)
+        mapCluster2 = plotter.true_list_node(cluster2)
+        estimator = EstimatorClass()
+        result = estimator.estimate_maha_distance(mapCluster1, mapCluster2)
+        return result < threshold, result
 
 
-    def merge(self,plotter):
+    def merge(self,plotter,threshold, mode = 0):
         starting_leafs = self.find_one_leaf_per_parent()
         if not starting_leafs:
             print("No leafs found")
@@ -287,7 +273,7 @@ class Custom_Tree:
         merch_log = {}
 
         while working_stack:
-            print("working stack size", len(working_stack))
+
             next_iteration_items = []
             if max_depth != 0:
                 max_depth -= 1
@@ -297,7 +283,7 @@ class Custom_Tree:
             
             for item in working_stack:  # Looking at the same level here
                 if item.parent:
-                    print("current item", item.name, "parent", item.parent.name)
+
                     siblings = item.parent.children
                     # Create networkx graph between all siblings
                     graph = nx.Graph()
@@ -310,32 +296,54 @@ class Custom_Tree:
                         for sibling2 in sibling_set:
                             if sibling != sibling2:
                                 # Use all parts in the comparison of the cluster so also the children of the points
-                                if self.comparison_two_clusters_true_false(sibling, sibling2,plotter):
+                                condition, result = self.comparison_two_clusters_true_false(sibling, sibling2,plotter,threshold)
+                                if condition:
                                     if merch_log.get(sibling.uuid) and sibling2.uuid in merch_log[sibling.uuid]:
                                         continue
                                     if merch_log.get(sibling2.uuid) and sibling.uuid in merch_log[sibling2.uuid]:
                                         continue
-                                    graph.add_edge(sibling, sibling2)
+                                    graph[sibling][sibling2]['weight'] = result
                     
                     # Check if the graph is connected
                     if len(graph.nodes) == 0:
                         continue
                     if nx.is_connected(graph):
-                        print("connected")
-                        print("parent name", item.parent.name)
-                        if item.parent.name != "root":
-                            item.parent.children = []
-                            next_iteration_items.append(item.parent)
+                        if mode == 0:
+                            if item.parent.name != "root":
+                                item.parent.children = []
+                                next_iteration_items.append(item.parent)
+                            else:
+                                pass
+                        # merge only best component from splits from before
                         else:
-                            pass
+                            # check if any nodes are in the merch_log and add them to list
+                            merch_nodes = []
+                            for node in graph.nodes:
+                                if merch_log.get(node.uuid):
+                                    total_weight_connected = 0
+                                    # check graph for all connected nodes to the current node and sum the weights
+                                    for connected_node in nx.node_connected_component(graph, node):
+                                        total_weight_connected += graph[node][connected_node]['weight']
+                                    # add node and weight to list
+                                    merch_nodes.append((node, total_weight_connected))
+                            # sort the list by weight
+                            merch_nodes = sorted(merch_nodes, key=lambda x: x[1], reverse=True)
+                            # add the best node to the parent and all other nodes that are not in merch_nodes
+                            for node in graph.nodes:
+                                # if not merch_nodes
+                                if node not in [x[0] for x in merch_nodes]:
+                                    pass
+                                    # TODO bin nicht ganz sicher ob das eig sinn macht
 
 
+
+                    # not connected
                     else:
                         merches = []
-                        print("not connected")
+
                         # Iterate all components
                         for component in nx.connected_components(graph):
-                            print("component", component)
+
                             # Create new node
                             name = ""
                             for node in component:
@@ -350,7 +358,7 @@ class Custom_Tree:
                             if name[-1] == "+":
                                 name = name[:-1]
                             new_node = Custom_tree_node(name)
-                            print("new node", new_node.name)
+
                             # Check if parent has parent
                             try:
                                 item.parent.parent.add_unique_childD(new_node)
@@ -359,7 +367,7 @@ class Custom_Tree:
                                 pass 
                             try:
                                 item.parent.children = []
-                                print(item.parent.children)
+
                             except:
                                 pass
                             merches.append(new_node.uuid)
