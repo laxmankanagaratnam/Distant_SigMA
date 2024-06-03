@@ -1,5 +1,5 @@
 import networkx as nx
-from Tree import Custom_Tree
+from alex_workspace.Tree import Custom_Tree
 import numpy as np
 from collections import defaultdict, Counter
 

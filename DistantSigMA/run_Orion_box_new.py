@@ -3,13 +3,13 @@ import sys
 import pandas as pd
 import numpy as np
 
-from DistantSigMA.noise_removal_functions import remove_field_stars, extract_signal_remove_spurious, extract_signal, \
+from DistantSigMA.noise_removal import remove_field_stars, extract_signal_remove_spurious, extract_signal, \
     consensus_function
-from DistantSigMA.clustering_setup import setup_ICRS_ps, save_output_summary
+from DistantSigMA.setup_and_scaling import setup_ICRS_ps, save_output_summary
 
 from SigMA.SigMA import SigMA
 from DistantSigMA.Analysis.IsochroneArchive.myTools import my_utility
-from DistantSigMA.DistantSigMA.sampling import lhc_lloyd
+from DistantSigMA.DistantSigMA.scalefactor_sampling import lhc_lloyd
 from DistantSigMA.DistantSigMA.cluster_simulations import SimulateCluster
 from DistantSigMA.DistantSigMA.PlotlyResults import plot
 import matplotlib.pyplot as plt

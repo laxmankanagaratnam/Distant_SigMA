@@ -3,17 +3,21 @@ import random
 import pandas as pd
 import matplotlib.pyplot as plt
 from typing import Union
+from sklearn.cluster import KMeans
 from sklearn.covariance import EmpiricalCovariance, MinCovDet
 from scipy.linalg import eigh
 
 from astropy.coordinates import ICRS, LSR, GalacticLSR, CartesianRepresentation
 import astropy.units as u
 
+from DistantSigMA.DistantSigMA.PlotlyResults import plot
+
 
 class SimulateCluster(object):
 
     def __init__(self, region_data: pd.DataFrame, group_id: Union[str, float],
-                 clustering_features: Union[list, np.array], label_column: str = "rsc", cov_split: list = None):
+                 clustering_features: Union[list, np.array], label_column: str = "rsc", cov_split: list = None,
+                 multiplier_fraction: float = 1.5):
 
         self.data = region_data[region_data[label_column] == group_id]
         self.data["distance"] = 1000 / self.data["parallax"]
@@ -28,7 +32,7 @@ class SimulateCluster(object):
         self.cluster_features = clustering_features
         self.cluster_solution = self.data[self.cluster_features]
         self.n_stars = int(self.data.shape[0])
-        self.n_samples = int(self.n_stars * 1.5)
+        self.n_samples = int(self.n_stars * multiplier_fraction)
         self.cov_matrix = None
         self.center = np.empty(shape=(len(clustering_features),))
 
@@ -50,7 +54,7 @@ class SimulateCluster(object):
             vel_split = self.cluster_solution.loc[:, ~self.cluster_solution.columns.isin(custom_split)]
 
         # Calculate the empirical covariance matrix
-        #cov_estimator = EmpiricalCovariance()
+        # cov_estimator = EmpiricalCovariance()
         cov_estimator = MinCovDet()
         pos_cov = cov_estimator.fit(pos_split).covariance_
         vel_cov = cov_estimator.fit(vel_split).covariance_
@@ -129,7 +133,7 @@ class SimulateCluster(object):
 
         icrs = lsr.transform_to(ICRS())
 
-        return [icrs.ra.value, icrs.dec.value, 1000/ icrs.distance.value, icrs.pm_ra_cosdec.value, icrs.pm_dec.value]
+        return [icrs.ra.value, icrs.dec.value, 1000 / icrs.distance.value, icrs.pm_ra_cosdec.value, icrs.pm_dec.value]
 
     @staticmethod
     def galacticLSR2spherical(cartesian_data):
@@ -207,5 +211,87 @@ def slim_sampling_data(input_file="Gaia_DR3_500pc_rs.csv", output_file="Gaia_DR3
 
     error_sampling_df.to_csv(path + output_file)
 
+
+def calculate_std_devs(input_df, SigMA_dict, sampling_data, n_artificial: int = 1, output_path: str = None,
+                       plot_figs: bool = False):
+
+    df_clusters = input_df[input_df.rsc != -1]  # -1 == field stars
+
+    # Add some small artificial clusters to increase scale factor sensitivity for those
+    n_simulated_clusters = len(np.unique(df_clusters["rsc"])) + n_artificial
+
+    # calculate center of all clusters
+    cluster_features = ['X', 'Y', 'Z', 'v_a_lsr', "v_d_lsr"]
+    kmeans = KMeans(n_clusters=1).fit(df_clusters[cluster_features])
+    centers_real = kmeans.cluster_centers_[0]
+
+    # initialize results arrays for the 5 cluster features
+    stds = np.empty(shape=(5, n_simulated_clusters))
+    e_convolved_dfs = []
+
+    # Loop over the clusters
+    for group in np.unique(df_clusters["rsc"])[:]:
+
+        # define subset for length check
+        subset = df_clusters[df_clusters["rsc"] == group]
+
+        # Simulate the cluster from its covariance matrix and convolve it with Gaia errors
+        sim = SimulateCluster(region_data=df_clusters, group_id=group, clustering_features=cluster_features)
+        e_convolved_cluster = sim.error_convolve(sampling_data=sampling_data)
+        sim_df = pd.DataFrame(data=sim.e_convolved_points,
+                              columns=["ra", "dec", "parallax", "pmra", "pmdec", "X", "Y", "Z"]) \
+            .assign(label=int(group))
+        e_convolved_dfs.append(sim_df)
+
+        # std cols
+        std_columns = ["ra", "dec", "parallax", "pmra", "pmdec"]
+        stds[:, group] = sim_df[std_columns].std().values
+
+        # use smallest subset to add a tiny cluster in the center
+        if len(subset) == df_clusters.groupby("rsc").size().min():
+            sim.add_mini_cluster(n_members=max(SigMA_dict['KNN_list']), center_coords=centers_real,
+                                 pos_cov_frac=0.5)
+            e_conv_tiny = sim.error_convolve(sampling_data=sampling_data)
+            tiny_df = pd.DataFrame(data=sim.e_convolved_points,
+                                   columns=["ra", "dec", "parallax", "pmra", "pmdec", "X", "Y", "Z"]).assign(
+                label=n_simulated_clusters)
+            e_convolved_dfs.append(tiny_df)
+
+            # also add this to the std cols
+            stds[:, n_simulated_clusters - 1] = tiny_df[std_columns].std().values
+
+        # resampled data histograms
+        if plot_figs:
+            fig = sim.diff_histogram(e_convolved_cluster)
+            plt.savefig(output_path + f"Group_{sim.group_id}.pdf", dpi=300)
+
+    # Create a master df of all groups
+    convolved_df = pd.concat(e_convolved_dfs, ignore_index=True)
+
+    if plot_figs:
+        convolved_df.to_csv(output_path + "Simulated_clusters.csv")
+        im_clusters = plot(convolved_df["label"], convolved_df, f"Simulated_clusters.html", icrs=True,
+                           output_pathname=output_path)
+
+        # outer histogram of the group stds
+        outer_fig, ax = plt.subplots(2, 3, figsize=(7, 4))
+        ax = ax.ravel()
+
+        try:
+            for i, label in enumerate(["ra", "dec", "parallax", "pmra", "pmdec"]):
+                data_column = stds[i, :]
+                num_bins_data = sim.Knuths_rule(data_column)
+                ax[i].hist(data_column, bins=len(data_column), facecolor="green", edgecolor='black')
+                ax[i].set_title(f"{label} ({round(min(data_column), 3)}, {round(max(data_column), 3)})")
+
+            plt.suptitle(f"Outer hist")
+            plt.tight_layout()
+            plt.close()
+        except ValueError:
+            pass
+
+        outer_fig.savefig(output_path + "Outer_std_distributions.png", dpi=300)
+
+    return stds
 # if __name__ == "__main__":
 # slim_sampling_data(output_file="Gaia_DR3_500pc_10percent.csv", slim_factor=0.1)

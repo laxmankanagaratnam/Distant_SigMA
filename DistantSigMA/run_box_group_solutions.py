@@ -4,13 +4,13 @@ import pandas as pd
 import numpy as np
 
 from DistantSigMA.Analysis.IsochroneArchive.myTools import my_utility
-from DistantSigMA.DistantSigMA.sampling import lhc_lloyd
+from DistantSigMA.DistantSigMA.scalefactor_sampling import lhc_lloyd
 from DistantSigMA.DistantSigMA.cluster_simulations import SimulateCluster
 from DistantSigMA.DistantSigMA.PlotlyResults import plot
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-from DistantSigMA.DistantSigMA.noise_removal_functions import setup_ICRS_ps, extract_signal_remove_spurious, \
+from DistantSigMA.DistantSigMA.noise_removal import setup_ICRS_ps, extract_signal_remove_spurious, \
     remove_field_stars, extract_signal, \
     partial_clustering, save_output_summary, consensus_function
 from SigMA.SigMA import SigMA

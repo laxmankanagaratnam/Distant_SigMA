@@ -16,8 +16,8 @@ from sklearn.preprocessing import LabelEncoder
 from SigMA.SigMA import SigMA
 
 from DistantSigMA.Analysis.IsochroneArchive.myTools import my_utility
-from DistantSigMA.DistantSigMA.clustering_setup import setup_Cartesian_ps
-from DistantSigMA.DistantSigMA.coarse import get_segments, merge_subsets
+from DistantSigMA.DistantSigMA.setup_and_scaling import setup_Cartesian_ps
+from DistantSigMA.DistantSigMA.coarse_clustering import get_segments, merge_subsets
 
 # 1.) Paths
 # ---------------------------------------------------------
