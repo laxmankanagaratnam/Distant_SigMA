@@ -1,4 +1,4 @@
-from NxGraphAssistant import NxGraphAssistant
+from alex_workspace.NxGraphAssistant import NxGraphAssistant
 
 import networkx as nx
 import uuid
@@ -9,8 +9,8 @@ import sys
 
 
 
-from EstimateClass import EstimatorClass
-from PlotHandler import PlotHandler
+from alex_workspace.EstimateClass import EstimatorClass
+from alex_workspace.PlotHandler import PlotHandler
 
 class Custom_tree_node:
     """Defines a node for use in a custom tree structure.

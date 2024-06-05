@@ -35,33 +35,32 @@ class EstimatorClass:
         data = data.rename(columns={'RV': 'radial_velocity', 'RV_error': 'radial_velocity_error'})
         return data
 
+
+
     def estimate_maha_distance(self, indices_1, indices_2):
-        """Estimate the Mahalanobis distance between two clusters of data."""
-        if indices_1.dtype == bool:
-            idx_1 = np.where(indices_1)[0]
-            idx_2 = np.where(indices_2)[0]
+        """In this version the cbve object is directly passed (which is instantiated outside of the function)."""
+        # Input check
+        cbve = self.cbve
+        if indices_1.dtype != bool:
+            bool_arr_1 = np.isin(np.arange(cbve.data.shape[0]), indices_1)
+            bool_arr_2 = np.isin(np.arange(cbve.data.shape[0]), indices_2)
         else:
-            idx_1 = indices_1
-            idx_2 = indices_2
+            bool_arr_1 = indices_1
+            bool_arr_2 = indices_2
 
-        data_subset = self.data.loc[np.union1d(idx_1, idx_2)]
-        data_subset = data_subset.loc[~data_subset.radial_velocity_error.isna()]
-        C_vel = np.diag(
-            [data_subset.pmra_error.mean(), data_subset.pmdec_error.mean(),
-             data_subset.radial_velocity_error.mean()]) ** 2
-
+        data_subset = cbve.data.loc[~cbve.rv_isnan & (bool_arr_1 | bool_arr_2)]
+        C_vel = np.diag([data_subset.pmra_error.mean(), data_subset.pmdec_error.mean(),
+                         data_subset.radial_velocity_error.mean()]) ** 2
+        # This creates a copy of the data --> not efficient and better to pass the object created to this function instead of the data (see below)
         # Estimate mean and covariance of the two clusters
-        mu_1, cov_1 = self.cbve.estimate_normal_params(cluster_subset=idx_1, method='BFGS')
-        mu_2, cov_2 = self.cbve.estimate_normal_params(cluster_subset=idx_2, method='BFGS')
-
+        mu_1, cov_1 = cbve.estimate_normal_params(cluster_subset=bool_arr_1, method='BFGS')
+        mu_2, cov_2 = cbve.estimate_normal_params(cluster_subset=bool_arr_2, method='BFGS')
         # Compute local covariance matrix in UVW space
-        ra, dec, plx = self.data.loc[np.union1d(idx_1, idx_2), ['ra', 'dec', 'parallax']].median().values.reshape(3, 1)
+        ra, dec, plx = cbve.data.loc[(bool_arr_1 | bool_arr_2), ['ra', 'dec', 'parallax']].mean().values.reshape(3, 1)
         C_uvw = transform_covariance_shper2gal(ra, dec, plx, C_vel.reshape(1, 3, 3))[0]
-
+        # Compute Mahalanobis distance
         min_maha = np.min([
             distance.mahalanobis(mu_1, mu_2, np.linalg.inv(cov_1 + C_uvw)),
             distance.mahalanobis(mu_1, mu_2, np.linalg.inv(cov_2 + C_uvw))
         ])
         return min_maha
-
-

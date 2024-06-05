@@ -13,7 +13,7 @@ import pandas as pd
 
 
 
-def get_orion_data(num, path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_WINF\Praktikum1\SigMA_Alex_modifications\alex_workspace\Grouped_solution_labels\Grouped_solution_labels/'):
+def get_orion_data(num, path = r'/Users/alena/PycharmProjects/Distant_SigMA/alex_workspace/Grouped_solution_labels/Grouped_solution_labels/'):
     '''
     Load the Orion dataset and return the graph that represents the data.
     
@@ -38,7 +38,7 @@ def get_orion_data(num, path = r'C:\Users\Alexm\OneDrive - Universität Wien\01_
 
     region = regions[r]
     grouped_labels = pd.read_csv(path+region+f'grouped_solutions_chunk_{r}.csv', header=None).to_numpy() # load labels
-
+    print(type(grouped_labels[0,0]), grouped_labels.shape)
     #density = pd.read_csv(label_path+region+f'Density_chunk_{r}.csv', header=None).to_numpy() # load density (for cc.remove_edges_density)
     #rho =density.reshape(len(density),)
 
