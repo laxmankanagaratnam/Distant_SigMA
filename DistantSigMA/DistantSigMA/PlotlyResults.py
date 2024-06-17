@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
+import matplotlib.pyplot as plt
 from scipy.interpolate import griddata
+from matplotlib import colors
 
 
 def create_grid_and_interpolate(x, y, z):
@@ -296,7 +297,7 @@ def plot_darkmode(labels: np.array, df: pd.DataFrame, filename: str, output_path
         return fig
 
 
-def plot_surface(labels: np.array, df: pd.DataFrame, filename: str, output_pathname: str = None,
+def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str = None,
                  icrs: bool = False, return_fig: bool = False):
     """ Simple function for creating a result plot of all the final clusters in Dark mode."""
 
@@ -308,17 +309,34 @@ def plot_surface(labels: np.array, df: pd.DataFrame, filename: str, output_pathn
         vel1 = "v_a_lsr"
         vel2 = "v_d_lsr"
 
-    cs = labels  # set label variable
-    df_plot = df.loc[
+
+    a = plt.get_cmap("YlGnBu_r")
+    norm = plt.Normalize(df.age.min(), df.age.max())
+    sm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=norm)
+    sm.set_array([])
+
+    unique_ages = df.drop_duplicates(subset='cluster_label')
+    # Sort the unique ages
+    sorted_unique_ages = unique_ages.sort_values('age')
+
+    # Merge back to the original dataframe to maintain the groupings
+    sorted_df = pd.merge(sorted_unique_ages[['cluster_label']], df, on='cluster_label', how='left')
+    age_range = sorted_df.drop_duplicates(subset="cluster_label")
+    age_range = age_range.reset_index(drop=True)
+    cm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=norm).to_rgba(age_range["age"], alpha=None, bytes=False,
+                                                                   norm=True)
+    col_hex = [colors.rgb2hex(c) for c in cm]
+    colo_hex = col_hex[:]
+
+    cs = sorted_df["cluster_label"]  # set label variable
+    df_plot = sorted_df.loc[
         cs != -1]  # remove field stars from dataframe (field stars are assigned -1 in SigMA during clustering)
     clustering_solution = cs.astype(int)  # set label array to integers
     clustering_solution = clustering_solution[clustering_solution != -1]  # also remove field stars from label array
     cut_us = np.random.uniform(0, 1, size=clustering_solution.shape[0]) < 0.1  # background cut
-
-    # plotting specs
-    plt_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#FF6692', '#B6E880', '#FF97FF',
-                  '#FECB52', '#B82E2E', '#316395']
-
+    #unique_labels, idxes = np.unique(np.unique(clustering_solution), return_index=True)
+    #real_labels = unique_labels[idxes]
+    #print(real_labels)
     #  ---------------  Create figure  ---------------
     #  --------------- ---------------  --------------
     fig_pos = make_subplots(
@@ -345,26 +363,29 @@ def plot_surface(labels: np.array, df: pd.DataFrame, filename: str, output_pathn
     fig_pos.add_trace(trace_sun, row=1, col=1)
 
     # 3D clusters
-    for j, uid in enumerate(np.unique(clustering_solution)):  # for each cluster label in the label array
+    for j, uid in enumerate(age_range["cluster_label"].to_numpy()):
+        uid = int(uid)
+
         if uid != -1:
             plot_points = (clustering_solution == uid)  # grab the right locations
             trace_surface = go.Mesh3d(x=df_plot.loc[plot_points, 'X'], y=df_plot.loc[plot_points, 'Y'],
-                                      z=df_plot.loc[plot_points, 'Z'], color=plt_colors[j % len(plt_colors)],
-                                      opacity=0.5, alphahull=7,
-                                      showlegend=True, name=f'Cluster {int(uid)} ({np.sum(plot_points)} stars)',
+                                      z=df_plot.loc[plot_points, 'Z'], color=colo_hex[j],
+                                      opacity=0.8, alphahull=7,
+                                      showlegend=True, name=f'{sub_data.loc[uid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(uid)})',
                                       legendgroup=f'group-{uid}', )
             fig_pos.add_trace(trace_surface, row=1, col=1)  # add cluster trace
 
     # --------------- 2D vel plot -------------------
 
     # cluster velocities (same as for 3D positions)
-    for j, uid in enumerate(np.unique(clustering_solution)):
+    for j, uid in enumerate(age_range["cluster_label"].to_numpy()):
+        uid = int(uid)
         if uid != -1:
             plot_points = (clustering_solution == uid)  # & cut_us
             trace_vel = go.Scatter(x=df_plot.loc[plot_points, vel1], y=df_plot.loc[plot_points, vel2],
-                                   mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)], ),
+                                   mode='markers', marker=dict(size=3, color=colo_hex[j % len(colo_hex)], ),
                                    hoverinfo='none', legendgroup=f'group-{uid}',
-                                   name=f'Cluster {uid} ({np.sum(plot_points)} stars)', showlegend=True)
+                                   name=f'{sub_data.loc[uid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(uid)})', showlegend=True)
             fig_vel.add_trace(trace_vel, row=1, col=1)
 
     # ------------ Update axis information ---------------
@@ -417,13 +438,14 @@ def plot_surface(labels: np.array, df: pd.DataFrame, filename: str, output_pathn
     # --------------- HRD plot -------------------
 
     # HRD of each cluster
-    for j, kid in enumerate(np.unique(clustering_solution)):
+    for j, kid in enumerate(age_range["cluster_label"].to_numpy()):
+        kid = int(kid)
         if kid != -1:
             plot_points = (clustering_solution == kid)  # & cut_us
             trace_hrd = go.Scatter(x=df_plot.loc[plot_points, 'g_rp'], y=df_plot.loc[plot_points, 'mag_abs_g'],
-                                   mode='markers', marker=dict(size=3, color=plt_colors[j % len(plt_colors)], ),
+                                   mode='markers', marker=dict(size=3, color=colo_hex[j % len(colo_hex)], ),
                                    hoverinfo='none', legendgroup=f'group-{kid}',
-                                   name=f'Cluster {kid} ({np.sum(plot_points)} stars)', showlegend=True)
+                                   name=f'{sub_data.loc[kid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(kid)})', showlegend=True)
             fig_HRD.add_trace(trace_hrd, row=1, col=1)
 
     fig_HRD.update_xaxes(title_text="G-RP", showgrid=False, row=1, col=1, color = "white")

@@ -23,11 +23,11 @@ class SimulateCluster(object):
         self.data["distance"] = 1000 / self.data["parallax"]
         self.group_id = group_id
         self.rv = self.data["radial_velocity"].dropna()
-        self.rv_error = self.data["radial_velocity_error"].dropna()
+       # self.rv_error = self.data["radial_velocity_error"].dropna()
 
         # clean rv
-        df_cleaned_rv = self.data[self.data['radial_velocity_error'] < 2]
-        self.cleaned_rv = df_cleaned_rv[["radial_velocity", "radial_velocity_error"]].dropna()
+       # df_cleaned_rv = self.data[self.data['radial_velocity_error'] < 2]
+       # self.cleaned_rv = df_cleaned_rv[["radial_velocity", "radial_velocity_error"]].dropna()
 
         self.cluster_features = clustering_features
         self.cluster_solution = self.data[self.cluster_features]
