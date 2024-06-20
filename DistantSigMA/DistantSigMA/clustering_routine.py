@@ -318,7 +318,7 @@ def partial_clustering(df_input, sf_params, parameter_dict: dict, mode: str, out
 
         # Perform consensus clustering on the c) and d) steps
         labels_cc, n_cc = consensus_function(label_matrix, rho_sum, df_focus,
-                                             f"{mode}_SimSol_{int(h)}_KNN_{knn}_CC",
+                                             f"{mode}_solutionGroup_{int(h)}_KNN_{knn}_CC",
                                              output_loc,
                                              plotting=True)
 

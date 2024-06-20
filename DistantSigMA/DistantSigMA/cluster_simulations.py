@@ -23,11 +23,11 @@ class SimulateCluster(object):
         self.data["distance"] = 1000 / self.data["parallax"]
         self.group_id = group_id
         self.rv = self.data["radial_velocity"].dropna()
-       # self.rv_error = self.data["radial_velocity_error"].dropna()
+        # self.rv_error = self.data["radial_velocity_error"].dropna()
 
         # clean rv
-       # df_cleaned_rv = self.data[self.data['radial_velocity_error'] < 2]
-       # self.cleaned_rv = df_cleaned_rv[["radial_velocity", "radial_velocity_error"]].dropna()
+        # df_cleaned_rv = self.data[self.data['radial_velocity_error'] < 2]
+        # self.cleaned_rv = df_cleaned_rv[["radial_velocity", "radial_velocity_error"]].dropna()
 
         self.cluster_features = clustering_features
         self.cluster_solution = self.data[self.cluster_features]
@@ -81,24 +81,27 @@ class SimulateCluster(object):
         self.mean_dist = np.sqrt(center_coords[0] ** 2 + center_coords[1] ** 2 + center_coords[2] ** 2)
         self.n_samples = n_members
 
-    def sample_errors(self, coord_to_sample, sampling_data):
-
+    def sample_errors(self, coord_to_sample, sampling_data, sample_radius):
         # in the .loc[x, :] attribute, the entire sampling_data dataframe is masked based on whether the calculated
         # distance is within 4 pc of the cluster center
         # from the masked array, #n_sample errors are sampled from the specified column
-        return sampling_data.loc[(sampling_data["dist"] >= self.mean_dist - 2) &
-                                 (sampling_data["dist"] <= self.mean_dist + 2), coord_to_sample].sample(
+
+        return sampling_data.loc[(sampling_data["dist"] >= self.mean_dist - sample_radius) &
+                                 (sampling_data["dist"] <= self.mean_dist + sample_radius), coord_to_sample].sample(
             self.n_samples).values
 
-    def error_convolve(self, sampling_data, return_coords=True):
+    def error_convolve(self, sampling_data, sample_radius, return_coords=True):
 
         ra, dec, dist = self.galacticLSR2spherical(self.simulated_points)
         parallax = 1000 / dist
 
         # Sample errors from the data
-        ra_errors = self.sample_errors(coord_to_sample='ra_error', sampling_data=sampling_data)
-        dec_errors = self.sample_errors(coord_to_sample='dec_error', sampling_data=sampling_data)
-        parallax_errors = self.sample_errors(coord_to_sample='parallax_error', sampling_data=sampling_data)
+        ra_errors = self.sample_errors(coord_to_sample='ra_error', sampling_data=sampling_data,
+                                       sample_radius=sample_radius)
+        dec_errors = self.sample_errors(coord_to_sample='dec_error', sampling_data=sampling_data,
+                                        sample_radius=sample_radius)
+        parallax_errors = self.sample_errors(coord_to_sample='parallax_error', sampling_data=sampling_data,
+                                             sample_radius=sample_radius)
 
         # pmra_errors = self.sample_errors(coord_to_sample='pmra_error', sampling_data=sampling_data)
         # pmdec_errors = self.sample_errors(coord_to_sample='pmdec_error', sampling_data=sampling_data)
@@ -107,10 +110,24 @@ class SimulateCluster(object):
         ra_resampled = np.random.normal(loc=ra, scale=ra_errors, size=ra.shape[0])
         dec_resampled = np.random.normal(loc=dec, scale=dec_errors, size=ra.shape[0])
         plx_resampled = np.random.normal(loc=parallax, scale=parallax_errors, size=ra.shape[0])
-        # build the table that will be exported for further processing
-        cartesian_coords = self.spherical2GalacticLSR([ra_resampled, dec_resampled, 1000 / plx_resampled])
+
+        # define v_coords
         v_lsr = self.simulated_points[:, 3:]
 
+        # filter out negative parallax values and their ra / dec / velocity counterparts
+        positive_plx_mask = plx_resampled >= 0
+
+        if not np.all(positive_plx_mask):
+            count_false = np.count_nonzero(positive_plx_mask == False)
+            print("Negative values encountered in resampled parallax column."
+                  f"Removed {count_false} samples.")
+            plx_resampled = plx_resampled[positive_plx_mask]
+            ra_resampled = ra_resampled[positive_plx_mask]
+            dec_resampled = dec_resampled[positive_plx_mask]
+            v_lsr = v_lsr[positive_plx_mask]
+
+        # build the table that will be exported for further processing
+        cartesian_coords = self.spherical2GalacticLSR([ra_resampled, dec_resampled, 1000 / plx_resampled])
         self.e_convolved_points = np.vstack([self.lsr2icrs([ra_resampled, dec_resampled, plx_resampled], v_lsr),
                                              cartesian_coords]).T
 
@@ -212,9 +229,8 @@ def slim_sampling_data(input_file="Gaia_DR3_500pc_rs.csv", output_file="Gaia_DR3
     error_sampling_df.to_csv(path + output_file)
 
 
-def calculate_std_devs(input_df, SigMA_dict, sampling_data, n_artificial: int = 1, output_path: str = None,
-                       plot_figs: bool = False):
-
+def calculate_std_devs(input_df, SigMA_dict, sampling_data, n_artificial: int = 1, sample_radius: int = 5,
+                       output_path: str = None, plot_figs: bool = False):
     df_clusters = input_df[input_df.rsc != -1]  # -1 == field stars
 
     # Add some small artificial clusters to increase scale factor sensitivity for those
@@ -237,7 +253,7 @@ def calculate_std_devs(input_df, SigMA_dict, sampling_data, n_artificial: int = 
 
         # Simulate the cluster from its covariance matrix and convolve it with Gaia errors
         sim = SimulateCluster(region_data=df_clusters, group_id=group, clustering_features=cluster_features)
-        e_convolved_cluster = sim.error_convolve(sampling_data=sampling_data)
+        e_convolved_cluster = sim.error_convolve(sampling_data=sampling_data, sample_radius=sample_radius)
         sim_df = pd.DataFrame(data=sim.e_convolved_points,
                               columns=["ra", "dec", "parallax", "pmra", "pmdec", "X", "Y", "Z"]) \
             .assign(label=int(group))
@@ -251,7 +267,7 @@ def calculate_std_devs(input_df, SigMA_dict, sampling_data, n_artificial: int = 
         if len(subset) == df_clusters.groupby("rsc").size().min():
             sim.add_mini_cluster(n_members=max(SigMA_dict['KNN_list']), center_coords=centers_real,
                                  pos_cov_frac=0.5)
-            e_conv_tiny = sim.error_convolve(sampling_data=sampling_data)
+            e_conv_tiny = sim.error_convolve(sampling_data=sampling_data, sample_radius=sample_radius)
             tiny_df = pd.DataFrame(data=sim.e_convolved_points,
                                    columns=["ra", "dec", "parallax", "pmra", "pmdec", "X", "Y", "Z"]).assign(
                 label=n_simulated_clusters)
