@@ -248,56 +248,65 @@ def partial_clustering(df_input, sf_params, parameter_dict: dict, mode: str, out
     # initialize SigMA with sf_mean
     clusterer = SigMA(data=df_focus, **sigma_kwargs)
 
-    # JUST ONE KNN INITIALLY
-    knn = KNNs[0]
+    rhosum_list = []
 
-    print(f"-- Current run with KNN = {knn} -- \n")
+    # Initialize array for the outer cc (occ) results (remove field stars / rfs, remove spurious clusters / rsc)
+    results_rsc = np.empty(shape=(len(KNNs), len(df_focus)))
 
-    label_matrix_rfs = np.empty(shape=(len(scale_factor_list), len(df_focus)))
-    label_matrix_rsc = np.empty(shape=(len(scale_factor_list), len(df_focus)))
-    label_matrix_simple = np.empty(shape=(len(scale_factor_list), len(df_focus)))
-
-    # initialize density-sum over all scaling factors
-    rho_sum = np.zeros(df_focus.shape[0], dtype=np.float32)
-
-    # ---------------------------------------------------------
     solutions = []
 
-    # Inner loop: Scale factors
-    for sf_id, sf in enumerate(scale_factor_list):
-        scale_factors = {'pos': {'features': ['ra', 'dec', 'parallax'], 'factor': list(sf[:3])},
-                         'vel': {'features': ['pmra', 'pmdec'], 'factor': list(sf[3:])}}
-        clusterer.set_scaling_factors(scale_factors)
-        print(f"Performing clustering for scale factor p{clusterer.scale_factors['pos']['factor']}"
-              f"{clusterer.scale_factors['vel']['factor']}...")
+    # Outer loop: KNN
+    for kid, knn in enumerate(KNNs):
 
-        # Fit
-        clusterer.fit(alpha=parameter_dict["alpha"], knn=knn, bh_correction=parameter_dict["bh_correction"])
-        label_array = clusterer.labels_
+        # JUST ONE KNN INITIALLY
+        #knn = KNNs[0]
 
-        # density and X
-        rho, X = clusterer.weights_, clusterer.X
-        rho_sum += rho
+        print(f"-- Current run with KNN = {knn} -- \n")
 
-        # a) remove field stars
-        nb_rfs = remove_field_stars(label_array, rho, label_matrix_rfs, sf_id)
-        # b) remove spurious clusters
-        nb_es, nb_rsc = extract_signal_remove_spurious(df_focus, label_array, rho, X, label_matrix_rsc, sf_id)
-        # c) do new method
-        nb_simple = extract_signal(label_array, clusterer, label_matrix_simple, sf_id)
-        # Write the output to the hyperparameter file:
-        save_output_summary(
-            summary_str={"knn": knn, "sf": str(sf), "n_rfs": nb_rfs, "n_rsc": nb_rsc, "n_simple": nb_simple},
-            file=output_loc + f"{mode}_ICC_{knn}_summary.csv")
+        label_matrix_rfs = np.empty(shape=(len(scale_factor_list), len(df_focus)))
+        label_matrix_rsc = np.empty(shape=(len(scale_factor_list), len(df_focus)))
+        label_matrix_simple = np.empty(shape=(len(scale_factor_list), len(df_focus)))
 
-        solutions.append({'labels': label_matrix_rsc[sf_id, :]})
+        # initialize density-sum over all scaling factors
+        rho_sum = np.zeros(df_focus.shape[0], dtype=np.float32)
+
+        # ---------------------------------------------------------
+
+        # Inner loop: Scale factors
+        for sf_id, sf in enumerate(scale_factor_list):
+            scale_factors = {'pos': {'features': ['ra', 'dec', 'parallax'], 'factor': list(sf[:3])},
+                             'vel': {'features': ['pmra', 'pmdec'], 'factor': list(sf[3:])}}
+            clusterer.set_scaling_factors(scale_factors)
+            print(f"Performing clustering for scale factor p{clusterer.scale_factors['pos']['factor']}"
+                  f"{clusterer.scale_factors['vel']['factor']}...")
+
+            # Fit
+            clusterer.fit(alpha=parameter_dict["alpha"], knn=knn, bh_correction=parameter_dict["bh_correction"])
+            label_array = clusterer.labels_
+
+            # density and X
+            rho, X = clusterer.weights_, clusterer.X
+            rho_sum += rho
+
+            # a) remove field stars
+            nb_rfs = remove_field_stars(label_array, rho, label_matrix_rfs, sf_id)
+            # b) remove spurious clusters
+            nb_es, nb_rsc = extract_signal_remove_spurious(df_focus, label_array, rho, X, label_matrix_rsc, sf_id)
+            # c) do new method
+            nb_simple = extract_signal(label_array, clusterer, label_matrix_simple, sf_id)
+            # Write the output to the hyperparameter file:
+            save_output_summary(
+                summary_str={"knn": knn, "sf": str(sf), "n_rfs": nb_rfs, "n_rsc": nb_rsc, "n_simple": nb_simple},
+                file=output_loc + f"{mode}_ICC_{knn}_summary.csv")
+
+            solutions.append({'labels': label_matrix_rsc[sf_id, :]})
 
     all_labels = [sol['labels'] for sol in solutions]
 
     threshold = 0.8  # threshold for similarity score
     penalty = 0.1  # penalty for different number of clusters
     score_func = nmi  # could also use fms, but seems to be less performant
-    # Hierarchical agglomerative clustering
+# Hierarchical agglomerative clustering
     clusterer_hier = cluster_solutions(
         all_labels,
         score_func=score_func, score_threshold=threshold, penalty=penalty, linkage='complete'

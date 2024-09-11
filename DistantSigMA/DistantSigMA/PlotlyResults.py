@@ -297,8 +297,8 @@ def plot_darkmode(labels: np.array, df: pd.DataFrame, filename: str, output_path
         return fig
 
 
-def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str = None,
-                 icrs: bool = False, return_fig: bool = False):
+def plot_surface(df: pd.DataFrame, filename: str, sub_data, cluster_descriptor=None, output_pathname: str = None,
+                 icrs: bool = False, return_fig: bool = False, colormap="RdBu_r", gridcolor="white"):
     """ Simple function for creating a result plot of all the final clusters in Dark mode."""
 
     # not relevant for the end result
@@ -310,9 +310,9 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
         vel2 = "v_d_lsr"
 
 
-    a = plt.get_cmap("YlGnBu_r")
+    # a = plt.get_cmap("YlGnBu_r")
     norm = plt.Normalize(df.age.min(), df.age.max())
-    sm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=norm)
+    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
     sm.set_array([])
 
     unique_ages = df.drop_duplicates(subset='cluster_label')
@@ -323,7 +323,7 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
     sorted_df = pd.merge(sorted_unique_ages[['cluster_label']], df, on='cluster_label', how='left')
     age_range = sorted_df.drop_duplicates(subset="cluster_label")
     age_range = age_range.reset_index(drop=True)
-    cm = plt.cm.ScalarMappable(cmap="RdBu_r", norm=norm).to_rgba(age_range["age"], alpha=None, bytes=False,
+    cm = plt.cm.ScalarMappable(cmap=colormap, norm=norm).to_rgba(age_range["age"], alpha=None, bytes=False,
                                                                    norm=True)
     col_hex = [colors.rgb2hex(c) for c in cm]
     colo_hex = col_hex[:]
@@ -342,7 +342,7 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
     fig_pos = make_subplots(
         rows=1, cols=1,
         specs=[[{"type": "scatter3d"}]],
-        subplot_titles=['position'], )
+        subplot_titles=[''], )
 
     fig_vel = make_subplots(
         rows=1, cols=1,
@@ -371,7 +371,7 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
             trace_surface = go.Mesh3d(x=df_plot.loc[plot_points, 'X'], y=df_plot.loc[plot_points, 'Y'],
                                       z=df_plot.loc[plot_points, 'Z'], color=colo_hex[j],
                                       opacity=0.8, alphahull=7,
-                                      showlegend=True, name=f'{sub_data.loc[uid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(uid)})',
+                                      showlegend=True, name=f'{sub_data.loc[uid, cluster_descriptor]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr',#, (Cluster {int(uid)})',
                                       legendgroup=f'group-{uid}', )
             fig_pos.add_trace(trace_surface, row=1, col=1)  # add cluster trace
 
@@ -385,27 +385,29 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
             trace_vel = go.Scatter(x=df_plot.loc[plot_points, vel1], y=df_plot.loc[plot_points, vel2],
                                    mode='markers', marker=dict(size=3, color=colo_hex[j % len(colo_hex)], ),
                                    hoverinfo='none', legendgroup=f'group-{uid}',
-                                   name=f'{sub_data.loc[uid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(uid)})', showlegend=True)
+                                   name=f'{sub_data.loc[uid, cluster_descriptor]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr')#, (Cluster {int(uid)})', showlegend=True)
             fig_vel.add_trace(trace_vel, row=1, col=1)
 
     # ------------ Update axis information ---------------
     # 3d position
-    plt_kwargs = dict(showbackground=False, showline=False, zeroline=True, zerolinecolor='white', zerolinewidth=2,
-                      showgrid=True, showticklabels=True, color="white",
-                      linecolor='white', linewidth=1, gridcolor='white')
+    plt_kwargs = dict(showbackground=False, showline=False, zeroline=True, zerolinecolor=gridcolor, zerolinewidth=2,
+                      showgrid=True, showticklabels=True, color=gridcolor,
+                      linecolor=gridcolor, linewidth=1, gridcolor=gridcolor)
 
-    xaxis = dict(**plt_kwargs, title='X [pc]')  # , tickmode = 'linear', dtick = 50, range=[-50,200])
-    yaxis = dict(**plt_kwargs, title='Y [pc]')  # , tickmode = 'linear', dtick = 50, range=[-200, 50])
-    zaxis = dict(**plt_kwargs, title='Z [pc]')  # , tickmode = 'linear', dtick = 50, range=[-100, 150])
+    xaxis = dict(**plt_kwargs, title='X [pc]' , tickmode = 'linear', dtick = 50, range=[-400, 0])
+    yaxis = dict(**plt_kwargs, title='Y [pc]' , tickmode = 'linear', dtick = 50, range=[-270, 0])
+    zaxis = dict(**plt_kwargs, title='Z [pc]' , tickmode = 'linear', dtick = 50, range=[-160, 0])
 
     # Finalize layout
     fig_pos.update_layout(
         title="",
         # width=800,
         # height=800,
-        title_font=dict(color="white"),
-        font=dict(color="white"),
-        showlegend=True,
+        title_font=dict(color=gridcolor),
+        font=dict(color=gridcolor),
+        showlegend=False,
+        #paper_bgcolor='rgba(0,0,0,0)',
+        #plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='#383838',
         plot_bgcolor='#383838',
         legend=dict(itemsizing='constant', font=dict(color="white")),
@@ -416,6 +418,8 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
             zaxis=dict(zaxis)
         )
     )
+
+
 
     # tangential vel
     if not icrs:
@@ -445,7 +449,7 @@ def plot_surface(df: pd.DataFrame, filename: str, sub_data, output_pathname: str
             trace_hrd = go.Scatter(x=df_plot.loc[plot_points, 'g_rp'], y=df_plot.loc[plot_points, 'mag_abs_g'],
                                    mode='markers', marker=dict(size=3, color=colo_hex[j % len(colo_hex)], ),
                                    hoverinfo='none', legendgroup=f'group-{kid}',
-                                   name=f'{sub_data.loc[kid,"phys"]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr, (Cluster {int(kid)})', showlegend=True)
+                                   name=f'{sub_data.loc[kid,cluster_descriptor]} ({np.sum(plot_points)} stars): {round(age_range.loc[j, "age"],1)} Myr')#, (Cluster {int(kid)})', showlegend=True)
             fig_HRD.add_trace(trace_hrd, row=1, col=1)
 
     fig_HRD.update_xaxes(title_text="G-RP", showgrid=False, row=1, col=1, color = "white")

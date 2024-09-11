@@ -107,15 +107,18 @@ class SimulateCluster(object):
         # pmdec_errors = self.sample_errors(coord_to_sample='pmdec_error', sampling_data=sampling_data)
 
         # Resample points
+        # TODO: Add to mask if outside range
         ra_resampled = np.random.normal(loc=ra, scale=ra_errors, size=ra.shape[0])
+        # TODO: Add to mask if outside range
         dec_resampled = np.random.normal(loc=dec, scale=dec_errors, size=ra.shape[0])
+        #
         plx_resampled = np.random.normal(loc=parallax, scale=parallax_errors, size=ra.shape[0])
 
         # define v_coords
         v_lsr = self.simulated_points[:, 3:]
 
         # filter out negative parallax values and their ra / dec / velocity counterparts
-        positive_plx_mask = plx_resampled >= 0
+        positive_plx_mask = plx_resampled > 0
 
         if not np.all(positive_plx_mask):
             count_false = np.count_nonzero(positive_plx_mask == False)

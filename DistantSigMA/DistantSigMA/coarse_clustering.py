@@ -40,6 +40,20 @@ def get_segments(df_fit, five_d_cols, label_matrix):
     """
 
     X = df_fit[five_d_cols]
+
+    # Replace infinite values with NaN (or another value of your choice)
+    # X.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # If needed, handle NaN values (e.g., drop rows/columns, fill with a specific value)
+
+    # Ensure all values are within the range of float32
+    # Clip values to the range of float32 to avoid overflow issues
+    X = X.clip(lower=np.finfo(np.float32).min, upper=np.finfo(np.float32).max)
+
+    # Convert DataFrame to float32 type
+   # X = X.astype(np.float32)
+
+
     # first bring all labels to the same areas
     Y_data = [rewrite_labels(label_matrix[0, :], label_matrix[sf, :]) for sf in range(label_matrix.shape[0])]
     # calculate the predictions for all Y-entries
@@ -75,9 +89,9 @@ def rewrite_labels(ref, to_change):
 
 def merge_subsets(df, chunk_labels, min_entries):
     df_copy = df.copy()
-    df_copy['labels'] = chunk_labels
+    df_copy['chunk_labels'] = chunk_labels
     # Group the DataFrame by the labels
-    grouped = df_copy.groupby('labels')
+    grouped = df_copy.groupby('chunk_labels')
 
     # Iterate over each group
     for label, group in grouped:
@@ -100,6 +114,6 @@ def merge_subsets(df, chunk_labels, min_entries):
             nearest_label = list(grouped.groups.keys())[nearest_idx]
 
             # Update the label of the group with too few entries
-            df_copy.loc[df_copy['labels'] == label, 'labels'] = nearest_label
+            df_copy.loc[df_copy['chunk_labels'] == label, 'chunk_labels'] = nearest_label
 
     return df_copy

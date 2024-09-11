@@ -12,13 +12,13 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
-
+from coordinate_transformations.sky_convert import to_SkyCoord, gal_vtan_lsr
 from SigMA.SigMA import SigMA
 
 from DistantSigMA.Analysis.IsochroneArchive.myTools import my_utility
 from DistantSigMA.DistantSigMA.setup_and_scaling import setup_Cartesian_ps
 from DistantSigMA.DistantSigMA.coarse_clustering import get_segments, merge_subsets
-
+from DistantSigMA.PlotlyResults import plot_darkmode
 # 1.) Paths
 # ---------------------------------------------------------
 # set sys and output paths
@@ -41,10 +41,28 @@ cols = ['source_id', 'ra', 'ra_error', 'dec', 'dec_error', 'parallax', 'parallax
         'phot_bp_rp_excess_factor',
         'radial_velocity', 'radial_velocity_error', 'rv_method_used', 'X', 'Y', 'Z', 'v_a_lsr', 'v_d_lsr']
 
-df_focus = pd.read_csv('../Data/Gaia/Orion_Taurus_full_galCoords_19-2-24.csv',
-                       usecols=cols, na_values="nan")
+df_focus = pd.read_csv("/Users/alena/PycharmProjects/Distant_SigMA/Data/Gaia/data_orion_focus.csv")
 
-# df_focus = pd.read_csv('../Data/Gaia/data_orion_focus.csv')
+'''
+# get rid of neg plx values
+df_clean = df[df.parallax >= 0]
+print(f"{df.shape[0]-df_clean.shape[0]}/{df.shape[0]} lost in plx cleaning.")
+
+sc = to_SkyCoord(df_clean['ra'].to_numpy(), df_clean['dec'].to_numpy(), df_clean['parallax'].to_numpy(),
+                 df_clean['pmra'].to_numpy(), df_clean['pmra'].to_numpy())
+
+df_gal = gal_vtan_lsr(sc)
+
+df_clean.loc[:, "v_a_lsr"] = df_gal.loc[:, "v_a_lsr"]
+df_clean.loc[:, "v_d_lsr"] = df_gal.loc[:, "v_d_lsr"]
+
+# get rid of NaN values
+df_focus = df_clean.dropna(subset=['X', 'Y', 'Z', 'v_a_lsr', 'v_d_lsr'])
+print(f"{df_clean.shape[0]-df_focus.shape[0]}/{df.shape[0]} lost in NaN cleaning.")
+
+#print(np.unique(df_focus["chunk_labels"]))
+#df_focus = df_focus[df_focus["chunk_labels"] == 0]
+'''
 
 # 3.) Parameters
 # ---------------------------------------------------------
@@ -63,7 +81,7 @@ setup_kwargs = setup_Cartesian_ps(df_fit=df_focus, KNN_list=KNN_list, beta=beta,
                                   knn_initcluster_graph=knn_initcluster_graph)
 
 sigma_kwargs = setup_kwargs["sigma_kwargs"]
-scale_factor_list = setup_kwargs["scale_factor_list"][4:6]
+scale_factor_list = setup_kwargs["scale_factor_list"][:]
 
 
 # 4.) Clustering
@@ -83,6 +101,7 @@ for knn in KNN_list:
 
     # only sf loop
     for sf_id, sf in enumerate(scale_factor_list[:]):
+        print(sf)
         # Set current scale factor
         scale_factors = {'vel': {'features': ['v_a_lsr', 'v_d_lsr'], 'factor': sf}}
         clusterer_coarse.set_scaling_factors(scale_factors)
@@ -104,12 +123,13 @@ for knn in KNN_list:
     combined_pred = get_segments(df_focus, sigma_kwargs["cluster_features"], label_matrix_coarse)
     print(np.unique(combined_pred, return_counts=True))
     # re-merge smallest regions if their size is smaller than KNN value
+
     df_save = merge_subsets(df_focus, combined_pred, knn)
 
     # 5.) Output
     # ---------------------------------------------------------
     # output path extension for runs
-    run = f"Orion_Taurus_box_KNN_{knn}_2sf"
+    run = f"Mock_box_KNN_{knn}"
 
     if not os.path.exists(output_path + f"Run_{run}/"):
         os.makedirs(output_path + f"Run_{run}/")
@@ -117,8 +137,8 @@ for knn in KNN_list:
     result_path = output_path + f"Run_{run}/"
 
     # plotting
-    # plot(labels=df_save["labels"], df=df_save, filename=f"RF_run_{run}",
-    #      output_pathname=result_path)
+    plot(labels=df_save["labels"], df=df_save, filename=f"RF_run_{run}",
+          output_pathname=result_path)
 
     # save dataframe for subsequent runs on the separate regions
     df_save.to_csv(result_path + f"RF_run_{run}.csv")
