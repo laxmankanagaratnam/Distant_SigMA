@@ -232,7 +232,7 @@ def get_similar_solutions(clusterer, all_labels, min_solutions_per_cluster=2):
 
 
 def partial_clustering(df_input, sf_params, parameter_dict: dict, mode: str, output_loc: str,
-                       column_means=None):
+                       column_means=None, min_num_of_solutions = 2):
     # most important variables
     KNNs = parameter_dict["KNN_list"]
     # setup kwargs
@@ -315,11 +315,11 @@ def partial_clustering(df_input, sf_params, parameter_dict: dict, mode: str, out
     plot_dendrogram(clusterer_hier, truncate_mode=None, color_threshold=1 - threshold)
 
     all_solutions = [sol_group for sol_group in
-                     get_similar_solutions(clusterer_hier, all_labels, min_solutions_per_cluster=2)]
+                     get_similar_solutions(clusterer_hier, all_labels, min_solutions_per_cluster=min_num_of_solutions)]
 
     grouped_label_matrix = np.empty(shape=(len(all_solutions), len(all_solutions[0][0][1])))
 
-    for h, sol_group in enumerate(get_similar_solutions(clusterer_hier, all_labels, min_solutions_per_cluster=2)):
+    for h, sol_group in enumerate(get_similar_solutions(clusterer_hier, all_labels, min_solutions_per_cluster=min_num_of_solutions)):
         # print(h, sol_group, "\n -----------------------------------")
         label_matrix = np.empty(shape=(len(sol_group), len(sol_group[0][1])))
         for k, entry in enumerate(sol_group):
@@ -337,3 +337,58 @@ def partial_clustering(df_input, sf_params, parameter_dict: dict, mode: str, out
     #                                       output_loc, plotting=True, return_cc=True)
 
     return grouped_label_matrix.astype(int)
+
+
+def reference_run(df_input, sf_params, parameter_dict: dict, mode, output_loc, column_means=None):
+
+        # most important variables
+        KNNs = parameter_dict["KNN_list"]
+        # setup kwargs
+        setup_kwargs, df_focus = setup_ICRS_ps(df_fit=df_input, sf_params=sf_params, sf_range=parameter_dict["sfs"],
+                                               KNN_list=KNNs, beta=parameter_dict["beta"],
+                                               knn_initcluster_graph=parameter_dict["knn_initcluster_graph"],
+                                               scaling=parameter_dict["scaling"], means=column_means)
+        sigma_kwargs = setup_kwargs["sigma_kwargs"]
+        scale_factor_list = setup_kwargs["scale_factor_list"]
+        print(scale_factor_list)
+        # ---------------------------------------------------------
+
+        # initialize SigMA with sf_mean
+        clusterer = SigMA(data=df_focus, **sigma_kwargs)
+
+        knn = KNNs[0]
+
+        print(f"-- Current run with KNN = {knn} -- \n")
+
+        label_matrix_rfs = np.empty(shape=(len(scale_factor_list), len(df_focus)))
+        label_matrix_rsc = np.empty(shape=(len(scale_factor_list), len(df_focus)))
+        label_matrix_simple = np.empty(shape=(len(scale_factor_list), len(df_focus)))
+
+        # initialize density-sum over all scaling factors
+        rho_sum = np.zeros(df_focus.shape[0], dtype=np.float32)
+
+        # ---------------------------------------------------------
+
+        print(f"Performing clustering for scale factor p{clusterer.scale_factors['pos']['factor']}"
+                  f"{clusterer.scale_factors['vel']['factor']}...")
+
+        # Fit
+        clusterer.fit(alpha=parameter_dict["alpha"], knn=knn, bh_correction=parameter_dict["bh_correction"])
+        label_array = clusterer.labels_
+
+        # density and X
+        rho, X = clusterer.weights_, clusterer.X
+        rho_sum += rho
+
+        # a) remove field stars
+        nb_rfs = remove_field_stars(label_array, rho, label_matrix_rfs, 0)
+        # b) remove spurious clusters
+        nb_es, nb_rsc = extract_signal_remove_spurious(df_focus, label_array, rho, X, label_matrix_rsc, 0)
+        # c) do new method
+        nb_simple = extract_signal(label_array, clusterer, label_matrix_simple, 0)
+
+        df_focus["labels_rsc"] = label_matrix_rsc.reshape(label_matrix_rsc.shape[1])
+        df_focus["labels_rfs"] = label_matrix_rfs.reshape(label_matrix_rfs.shape[1])
+        df_focus["labels_simple"] = label_matrix_simple.reshape(label_matrix_simple.shape[1])
+
+        return df_focus

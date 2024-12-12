@@ -125,7 +125,7 @@ class NxGraphAssistant():
         G_copy.remove_edges_from(re)
         return G_copy
     @staticmethod
-    def remove_edges_with_minor(G,similarity='weight',treshhold=0.3,treshhold_minor = 0.8):
+    def remove_edges_with_minor(G,similarity='weight',threshold=0.3,threshold_minor = 0.8):
         """
         Removes edges from a graph based on a primary and a secondary similarity threshold, which is the minor similarity. only if both thresholds are not met the edge is removed.
 
@@ -144,9 +144,9 @@ class NxGraphAssistant():
         # --- remove edges with unmatching cluster solutions
         remove_edges = []
         for (e1, e2), js in e2js.items():
-            if js < treshhold:
+            if js < threshold:
                 js_minor = G_copy[e1][e2][similarity + "_minor"]
-                if js_minor < treshhold_minor:
+                if js_minor < threshold_minor:
                     remove_edges.append((e1, e2))
         G_copy.remove_edges_from(remove_edges)
         return G_copy
