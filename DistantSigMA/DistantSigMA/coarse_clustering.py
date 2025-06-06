@@ -8,6 +8,9 @@ from scipy.stats import mode
 import numpy as np
 
 
+from DistantSigMA.DistantSigMA.PlotlyResults import plot_darkmode
+
+
 # 20-2-24
 def train_forests(X, Y):
     """
@@ -29,7 +32,7 @@ def train_forests(X, Y):
     return y_pred
 
 
-def get_segments(df_fit, five_d_cols, label_matrix):
+def get_segments(df_fit, five_d_cols, label_matrix, verify_results_path:str = None):
     """
     Function that retrieves the segments that the random forest classifier created.
 
@@ -56,6 +59,13 @@ def get_segments(df_fit, five_d_cols, label_matrix):
 
     # first bring all labels to the same areas
     Y_data = [rewrite_labels(label_matrix[0, :], label_matrix[sf, :]) for sf in range(label_matrix.shape[0])]
+
+    for ii, ylabel in enumerate(Y_data):
+        # Plot to verify
+        df_verify = df_fit.copy()
+        df_verify["labels"] = ylabel
+      #  plot_darkmode(labels=df_verify["labels"], df=df_verify, filename=f"solution_sf_{ii}",
+       #           output_pathname=verify_results_path)
     # calculate the predictions for all Y-entries
     y_arr = [train_forests(X, y) for y in Y_data]
     # Calculate the majority-voted predictions
@@ -91,6 +101,7 @@ def merge_subsets(df, chunk_labels, min_entries):
     df_copy = df.copy()
     df_copy['chunk_labels'] = chunk_labels
     # Group the DataFrame by the labels
+    '''
     grouped = df_copy.groupby('chunk_labels')
 
     # Iterate over each group
@@ -115,5 +126,5 @@ def merge_subsets(df, chunk_labels, min_entries):
 
             # Update the label of the group with too few entries
             df_copy.loc[df_copy['chunk_labels'] == label, 'chunk_labels'] = nearest_label
-
+    '''
     return df_copy

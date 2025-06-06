@@ -6,7 +6,8 @@ from scipy.stats import median_abs_deviation as MAD
 from SigMA.bayesian_velocity_scaling import scale_factors as sf_function
 
 
-def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_initcluster_graph: int):
+def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_initcluster_graph: int,
+                       info_path:str = None):
     """
     Function that automatically sets up the Cartesian phase-space.
 
@@ -21,10 +22,11 @@ def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_in
     n_resampling = 10
     cluster_features = ['X', 'Y', 'Z', 'v_a_lsr', 'v_d_lsr']
     # scaling relationship
-    scale_factor_list, mean_sf, scale_factors = bayesian_scaling(df_fit=df_fit)
+    scale_factor_list, mean_sf, scale_factors = bayesian_scaling(df_fit=df_fit, info_path=info_path)
     # SigMA kwargs
     sigma_kwargs = dict(cluster_features=cluster_features, scale_factors=scale_factors, nb_resampling=n_resampling,
-                        max_knn_density=max(KNN_list) + 1, beta=beta, knn_initcluster_graph=knn_initcluster_graph)
+                        max_knn_density=max(KNN_list) + 1, beta=beta, knn_initcluster_graph=knn_initcluster_graph,
+                       )
 
     setup_dict = {"scale_factor_list": scale_factor_list, "mean_sf": mean_sf, "scale_factors": scale_factors,
                   "sigma_kwargs": sigma_kwargs}
@@ -98,7 +100,7 @@ def parameter_scaler(input_arr: np.array, scaling: str):
         return input_arr
 
 
-def bayesian_scaling(df_fit: pd.DataFrame, info_path: str = None):
+def bayesian_scaling(df_fit: pd.DataFrame, info_path: str):
     """
     Bayesian calculation of the scaling factors for the phase-space velocity sub-space. For now only in use for
     Cartesian phase-space.
