@@ -29,12 +29,12 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
     found_cluster = found_cluster.sort_values(by="density")
 
     # Set density thresholds for slider steps
-    density_thresholds =observable_df.loc[:,f"{observable}_x"].to_numpy()
+    density_thresholds = observable_df.loc[:, f"{observable}_x"].to_numpy()
 
     # 2D line plot: cumulative count vs. threshold
     line2d = go.Scatter(
-        x=observable_df.loc[:,f"{observable}_x"],
-        y=observable_df.loc[:,f"{observable}_y"],
+        x=observable_df.loc[:, f"{observable}_x"],
+        y=observable_df.loc[:, f"{observable}_y"],
         mode='lines',
         name=f'{observable}',
         line=dict(color=plt_colors[cluster_id % len(plt_colors)]),
@@ -66,7 +66,6 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
         legendgroup="cluster"
     )
     fig.add_trace(legend_trace, row=1, col=2)
-
 
     # Save index of static traces
     initial_traces = len(fig.data)
@@ -101,7 +100,7 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
         # 2D vertical line marker for current density threshold
         trace_vline = go.Scatter(
             x=[rho, rho],
-            y=[0, observable_df.loc[:,f"{observable}_y"].max()],
+            y=[0, observable_df.loc[:, f"{observable}_y"].max()],
             mode='lines',
             line=dict(color='red', dash='dash'),
             name='Threshold',
@@ -112,8 +111,8 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
         # Build visibility map
         n_dynamic = len(density_thresholds) * 2
         visibility = [True] * initial_traces + [False] * n_dynamic
-        visibility[initial_traces + step_idx * 2] = True       # 3D cluster points
-        visibility[initial_traces + step_idx * 2 + 1] = True   # 2D vertical line
+        visibility[initial_traces + step_idx * 2] = True  # 3D cluster points
+        visibility[initial_traces + step_idx * 2 + 1] = True  # 2D vertical line
 
         steps.append(dict(
             method='update',
@@ -153,6 +152,7 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
     )
 
     return fig
+
 
 def analyze_cluster(cluster_id, df, label_list, cmd_params, pos_params=None, vel_params=None):
     plt_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#FF6692', '#B6E880', '#FF97FF',
@@ -328,6 +328,91 @@ def analyze_cluster(cluster_id, df, label_list, cmd_params, pos_params=None, vel
     return fig
 
 
+def plot_3D_data(data, labels, xyz_axes=None, ax_range=None):
+    if ax_range is None:
+        ax_range = [-100, 100]
+    if xyz_axes is None:
+        xyz_axes = ['X', 'Y', 'Z']
+    plt_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#FF6692', '#B6E880', '#FF97FF',
+                  '#FECB52', '#B82E2E', '#316395']
+
+    # Create figure
+    fig = make_subplots(
+        rows=1, cols=1,
+        specs=[[{"type": "scatter3d"}]],
+        column_widths=[1],
+        subplot_titles=[
+            '3D',
+        ],
+
+    )
+
+    # --------------- Invisible points in corners -------------------
+    trace_invis = go.Scatter3d(
+        x=ax_range, y=ax_range, z=ax_range,
+        mode='markers',
+        marker=dict(size=0.1, color='white', ),
+        hoverinfo='none',
+        showlegend=False,
+        name='Invisible points',
+    )
+    fig.add_trace(trace_invis, row=1, col=1)
+    # --------------- 3D scatter plot -------------------
+    for i, u_label in enumerate(np.unique(labels)):
+        if u_label == -1:
+            trace_3d = go.Scatter3d(
+                x=data.loc[labels == u_label, xyz_axes[0]],
+                y=data.loc[labels == u_label, xyz_axes[1]],
+                z=data.loc[labels == u_label, xyz_axes[2]],
+                mode='markers',
+                marker=dict(size=2, color="darkgray"),
+                hoverinfo='name',
+                showlegend=True,
+                name=f'Noise ({np.sum(labels == u_label)} stars)',
+                legendgroup=f'group-{u_label}',
+            )
+            fig.add_trace(trace_3d, row=1, col=1)
+        else:
+            trace_3d = go.Scatter3d(
+                x=data.loc[labels == u_label, xyz_axes[0]],
+                y=data.loc[labels == u_label, xyz_axes[1]],
+                z=data.loc[labels == u_label, xyz_axes[2]],
+                mode='markers',
+                marker=dict(size=3, color=plt_colors[i % len(plt_colors)]),
+                hoverinfo='name',
+                showlegend=True,
+                name=f'Cluster {u_label} ({np.sum(labels == u_label)} stars)',
+                legendgroup=f'group-{u_label}',
+        )
+        fig.add_trace(trace_3d, row=1, col=1)
+
+    # 3d position
+    plt_kwargs = dict(showbackground=False, showline=False, zeroline=True, zerolinecolor='grey', zerolinewidth=2,
+                      showgrid=True, showticklabels=True,
+                      linecolor='black', linewidth=1, gridcolor='rgba(100,100,100,0.5)')
+
+    xaxis = dict(**plt_kwargs, title=xyz_axes[0], range=ax_range)
+    yaxis = dict(**plt_kwargs, title=xyz_axes[1], range=ax_range)
+    zaxis = dict(**plt_kwargs, title=xyz_axes[2], range=ax_range)
+
+    # Finalize layout
+    fig.update_layout(
+        title="",
+        showlegend=True,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        legend=dict(itemsizing='constant'),
+        # 3D plot
+        scene=dict(
+            xaxis=dict(xaxis),
+            yaxis=dict(yaxis),
+            zaxis=dict(zaxis)
+        )
+    )
+
+    return fig
+
+
 if __name__ == "__main__":
 
     # Paths
@@ -358,6 +443,5 @@ if __name__ == "__main__":
     obs_df = pd.read_csv("datafiles/observables_cluster_1.csv")
 
     f = density_slider_plot(1, df=df, label_list=["SigMA_noisy_pruned"], observable="MCD", observable_df=obs_df)
-
 
     f.write_html(output_path + "density_slider_MCD.html")
