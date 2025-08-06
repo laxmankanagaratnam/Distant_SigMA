@@ -154,3 +154,19 @@ if __name__ == "__main__":
     print("NMI: ", nmi(data.real_ref, data.labels_SigMA_aligned))
     print(np.unique(data.real_ref, return_counts=True), "\n \n",
           np.unique(data.labels_SigMA_aligned, return_counts=True))
+
+    # ---------------------------------------------------------
+    # 2. Artificially add noise to the labels
+    #
+    #    by assigning stars that were classified as -1 in both
+    #    the reference and SigMA labelling randomly to a given
+    #    cluster in the SigMA labels
+    # ---------------------------------------------------------
+
+    # data = noisy_solution(p=0.5,
+    #                       input_data=input_data,
+    #                       reference_labels="reference",
+    #                       clustered_labels="labels_SigMA_aligned",
+    #                       new_label_col="SigMA_noisy")
+    #
+    # data.sort_values(by="SigMA_noisy", inplace=True)

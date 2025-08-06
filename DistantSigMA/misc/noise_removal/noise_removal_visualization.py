@@ -156,6 +156,7 @@ def density_slider_plot(cluster_id, df, label_list, observable: str, observable_
 
 def analyze_cluster(cluster_id, df, label_list, cmd_params, pos_params=None, vel_params=None):
     plt_colors = ['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#FF6692', '#B6E880', '#FF97FF',
+                  '#FECB52', '#B82E2E', '#316395', '#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#FF6692', '#B6E880', '#FF97FF',
                   '#FECB52', '#B82E2E', '#316395']
 
     if vel_params is None:
