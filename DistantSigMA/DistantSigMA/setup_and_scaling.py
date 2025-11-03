@@ -7,7 +7,8 @@ from SigMA.bayesian_velocity_scaling import scale_factors as sf_function
 
 
 def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_initcluster_graph: int,
-                       info_path:str = None):
+                       info_path: str = None, cluster_features: list = None, nb_resampling: int = 10,
+                       kd_tree_data=None):
     """
     Function that automatically sets up the Cartesian phase-space.
 
@@ -19,14 +20,16 @@ def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_in
     """
 
     # set cluster parameters specific to the chosen coordinate system
-    n_resampling = 10
-    cluster_features = ['X', 'Y', 'Z', 'v_a_lsr', 'v_d_lsr']
+    n_resampling = nb_resampling
+    if cluster_features is None:
+        cluster_features = ['X', 'Y', 'Z', 'v_a_lsr', 'v_d_lsr']
     # scaling relationship
-    scale_factor_list, mean_sf, scale_factors = bayesian_scaling(df_fit=df_fit, info_path=info_path)
+    scale_factor_list, mean_sf, scale_factors = bayesian_scaling(df_fit=df_fit, info_path=info_path,
+                                                                 cols=cluster_features[3:])
     # SigMA kwargs
     sigma_kwargs = dict(cluster_features=cluster_features, scale_factors=scale_factors, nb_resampling=n_resampling,
                         max_knn_density=max(KNN_list) + 1, beta=beta, knn_initcluster_graph=knn_initcluster_graph,
-                       )
+                        kd_tree_data=kd_tree_data)
 
     setup_dict = {"scale_factor_list": scale_factor_list, "mean_sf": mean_sf, "scale_factors": scale_factors,
                   "sigma_kwargs": sigma_kwargs}
@@ -35,7 +38,7 @@ def setup_Cartesian_ps(df_fit: pd.DataFrame, KNN_list: list, beta: float, knn_in
 
 def setup_ICRS_ps(df_fit: pd.DataFrame, sf_params: Union[str, list], sf_range: Union[list, np.linspace, range],
                   KNN_list: Union[list, np.linspace, range], beta: float, knn_initcluster_graph: int,
-                  scaling: str = None, means=None):
+                  scaling: str = None, means=None, kd_tree_data=None):
     """
     Function that automatically sets up the ICRS phase-space.
 
@@ -55,28 +58,42 @@ def setup_ICRS_ps(df_fit: pd.DataFrame, sf_params: Union[str, list], sf_range: U
 
     # scale the ICRS parameters
     if type(scaling) == str:
-        df_scaled = df_fit.copy()
+
         cols_to_scale = ['ra', 'dec', 'parallax', 'pmra', 'pmdec']
         scaled_cols = ['ra_scaled', 'dec_scaled', 'parallax_scaled', 'pmra_scaled', 'pmdec_scaled']
-        scaled_data = [parameter_scaler(df_scaled[col], scaling) for col in cols_to_scale]
 
+        df_scaled = df_fit.copy()
+        scaled_data = [parameter_scaler(df_scaled[col], scaling) for col in cols_to_scale]
         for col_id, col in enumerate(scaled_cols):
             df_scaled[col] = scaled_data[col_id]
-
         df_fin = df_scaled
+
+        if kd_tree_data is not None:
+            df_kd_tree_data_scaled = kd_tree_data.copy()
+            scaled_kd_tree_data = [parameter_scaler(df_kd_tree_data_scaled[col], scaling) for col in cols_to_scale]
+            for col_id, col in enumerate(scaled_cols):
+                df_kd_tree_data_scaled[col] = scaled_kd_tree_data[col_id]
+        else:
+            df_kd_tree_data_scaled = None
+
 
     else:
         scaled_cols = ['ra', 'dec', 'parallax', 'pmra', 'pmdec']
         df_fin = df_fit
+        # TODO: Implement scaling here for kdtree_data
+        df_kd_tree_data_scaled = kd_tree_data
 
     if type(sf_params) == str:
         mean_sf, scale_factors = single_parameter_scaling(sf_params, sf_range)
     elif type(sf_params) == list:
         scale_factors = means
+    else:
+        raise ValueError("SF-Param input wrong")
 
     # SigMA kwargs
     sigma_kwargs = dict(cluster_features=scaled_cols, scale_factors=scale_factors, nb_resampling=n_resampling,
-                        max_knn_density=max(KNN_list) + 1, beta=beta, knn_initcluster_graph=knn_initcluster_graph)
+                        max_knn_density=max(KNN_list) + 1, beta=beta, knn_initcluster_graph=knn_initcluster_graph,
+                        kd_tree_data=df_kd_tree_data_scaled)
 
     setup_dict = {"scale_factor_list": sf_range, "scale_factors": scale_factors, "sigma_kwargs": sigma_kwargs}
 
@@ -100,7 +117,7 @@ def parameter_scaler(input_arr: np.array, scaling: str):
         return input_arr
 
 
-def bayesian_scaling(df_fit: pd.DataFrame, info_path: str):
+def bayesian_scaling(df_fit: pd.DataFrame, info_path: str, cols=None):
     """
     Bayesian calculation of the scaling factors for the phase-space velocity sub-space. For now only in use for
     Cartesian phase-space.
@@ -111,12 +128,15 @@ def bayesian_scaling(df_fit: pd.DataFrame, info_path: str):
     """
     if info_path is None:
         info_path = '../Data/bayesian_LR_data.npz'
+
+    if cols is None:
+        cols = ['v_a_lsr', 'v_d_lsr']
     vel_scaling_info = np.load(info_path)
     x_sf, post_pred_sf = vel_scaling_info['x'], vel_scaling_info['posterior_predictive']
     d = 1000 / df_fit.parallax
     scale_factor_list = sf_function(x_sf, post_pred_sf, x_range=(d.min(), d.max()))
     mean_sf = np.mean(scale_factor_list)
-    scale_factors = {'vel': {'features': ['v_a_lsr', 'v_d_lsr'], 'factor': mean_sf}}
+    scale_factors = {'vel': {'features': cols, 'factor': mean_sf}}
     return scale_factor_list, mean_sf, scale_factors
 
 
