@@ -9,7 +9,7 @@ def generate_sfs(loc_to_file):
     std_vals = np.genfromtxt(loc_to_file, usecols=(1, 2, 3), skip_header=0, max_rows=5)
     sfs_array = np.empty(shape=(5, 3))
     for h, row in enumerate(std_vals[:]):
-        flipped_row = row[::-1]
+        flipped_row = row[::-1]  # need to flip because I am using the inverses?
         sfs_array[h] = 1 / flipped_row
 
     return sfs_array
@@ -50,6 +50,10 @@ def lhc_lloyd(sfs_file, size):
 
     l_bound = list(sfs_array[:, 0])
     h_bound = list(sfs_array[:, 2])
+
+    # Sanity check
+    # print("lower: ",l_bound)
+    # print("upper: ", h_bound)
 
     sampler = qmc.LatinHypercube(d=len(l_bound), optimization="lloyd")
     samples = sampler.random(n=size)
